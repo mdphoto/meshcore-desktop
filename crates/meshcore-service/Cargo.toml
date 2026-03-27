@@ -1,0 +1,27 @@
+[package]
+name = "meshcore-service"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Couche service MeshCore : logique métier, état, orchestration"
+
+[dependencies]
+meshcore-rs = { workspace = true }
+meshcore-protocol = { path = "../meshcore-protocol" }
+meshcore-crypto = { path = "../meshcore-crypto" }
+meshcore-transport = { path = "../meshcore-transport" }
+meshcore-storage = { path = "../meshcore-storage" }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+ureq = "3"
+flate2 = "1"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

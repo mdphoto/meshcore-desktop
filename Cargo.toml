@@ -1,0 +1,72 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/meshcore-protocol",
+    "crates/meshcore-crypto",
+    "crates/meshcore-transport",
+    "crates/meshcore-storage",
+    "crates/meshcore-service",
+    "crates/meshcore-app",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["Michel Dessenne"]
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# MeshCore protocol
+meshcore-rs = "0.1"
+
+# Crypto
+aes = "0.8"
+cipher = "0.4"
+hmac = "0.12"
+sha2 = "0.10"
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+rand = "0.8"
+
+# Storage
+rusqlite = { version = "0.34", features = ["bundled"] }
+
+# Binary encoding
+byteorder = "1"
+bytes = "1"
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Tauri
+tauri = { version = "2", features = [] }
+tauri-build = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-deep-link = "2"
+
+# BLE
+btleplug = "0.11"
+
+# Serial
+tokio-serial = "5"
+
+# Compression
+smaz = "0.1"

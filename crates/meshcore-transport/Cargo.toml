@@ -1,0 +1,21 @@
+[package]
+name = "meshcore-transport"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Couche transport MeshCore : BLE, Serial, TCP avec reconnexion"
+
+[dependencies]
+meshcore-rs = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+btleplug = { workspace = true }
+tokio-serial = { workspace = true }
+bytes = { workspace = true }
+backoff = { version = "0.4", features = ["tokio"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

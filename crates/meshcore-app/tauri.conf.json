@@ -1,0 +1,69 @@
+{
+  "productName": "MeshCore Desktop",
+  "version": "0.1.0",
+  "identifier": "io.meshcore.desktop",
+  "build": {
+    "frontendDist": "../../frontend/dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": "npm run --prefix ../../frontend build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "MeshCore Desktop",
+        "width": 1200,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false,
+        "minWidth": 800,
+        "minHeight": 600
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Utility",
+    "shortDescription": "Client desktop pour les réseaux mesh LoRa MeshCore",
+    "longDescription": "MeshCore Desktop est un client cross-platform pour communiquer avec des dispositifs LoRa MeshCore via BLE, USB ou TCP. Messagerie chiffrée, cartographie des nœuds, gestion des repeaters.",
+    "copyright": "Copyright (c) 2026 Michel Dessenne",
+    "linux": {
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"],
+        "section": "comm",
+        "desktopTemplate": null
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    },
+    "windows": {
+      "wix": null,
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["meshcore"]
+      }
+    }
+  }
+}
