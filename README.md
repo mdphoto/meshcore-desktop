@@ -25,27 +25,36 @@ Communiquez hors réseau via BLE, USB ou TCP avec vos dispositifs MeshCore.
 
 *Bientôt disponibles*
 
+## Téléchargement v0.1.0
+
+| Plateforme | Téléchargement |
+|---|---|
+| Linux (Debian/Ubuntu) | [MeshCore.Desktop_0.1.0_amd64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_amd64.deb) |
+| Linux (AppImage) | [MeshCore.Desktop_0.1.0_amd64.AppImage](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_amd64.AppImage) |
+| Windows | [MeshCore.Desktop_0.1.0_x64-setup.exe](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_x64-setup.exe) |
+| macOS (Apple Silicon) | [MeshCore.Desktop_0.1.0_aarch64.dmg](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_aarch64.dmg) |
+| macOS (Intel) | [MeshCore.Desktop_0.1.0_x64.dmg](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_x64.dmg) |
+
 ## Installation
 
 ### Linux
 
-Téléchargez le `.deb` ou `.rpm` depuis la [page Releases](https://github.com/mdphoto/meshcore-desktop/releases).
-
 ```bash
 # Debian/Ubuntu
-sudo dpkg -i MeshCore-Desktop_0.1.0_amd64.deb
+sudo dpkg -i MeshCore.Desktop_0.1.0_amd64.deb
 
-# Fedora/RHEL
-sudo rpm -i MeshCore-Desktop-0.1.0-1.x86_64.rpm
+# Ou AppImage (pas d'installation requise)
+chmod +x MeshCore.Desktop_0.1.0_amd64.AppImage
+./MeshCore.Desktop_0.1.0_amd64.AppImage
 ```
 
 ### Windows
 
-Téléchargez le `.exe` depuis les [Releases](https://github.com/mdphoto/meshcore-desktop/releases) et lancez l'installeur.
+Lancez `MeshCore.Desktop_0.1.0_x64-setup.exe` et suivez l'installeur.
 
 ### macOS
 
-Téléchargez le `.dmg` depuis les [Releases](https://github.com/mdphoto/meshcore-desktop/releases), ouvrez-le et glissez l'application dans Applications.
+Ouvrez le `.dmg` et glissez MeshCore Desktop dans Applications.
 
 ## Compilation depuis les sources
 
@@ -146,27 +155,36 @@ Communicate off-grid via BLE, USB or TCP with your MeshCore devices.
 - **Deep links**: `meshcore://` scheme to open contacts and channels
 - **Dark/light theme**
 
+## Download v0.1.0
+
+| Platform | Download |
+|---|---|
+| Linux (Debian/Ubuntu) | [MeshCore.Desktop_0.1.0_amd64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_amd64.deb) |
+| Linux (AppImage) | [MeshCore.Desktop_0.1.0_amd64.AppImage](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_amd64.AppImage) |
+| Windows | [MeshCore.Desktop_0.1.0_x64-setup.exe](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_x64-setup.exe) |
+| macOS (Apple Silicon) | [MeshCore.Desktop_0.1.0_aarch64.dmg](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_aarch64.dmg) |
+| macOS (Intel) | [MeshCore.Desktop_0.1.0_x64.dmg](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_x64.dmg) |
+
 ## Installation
 
 ### Linux
 
-Download the `.deb` or `.rpm` from the [Releases page](https://github.com/mdphoto/meshcore-desktop/releases).
-
 ```bash
 # Debian/Ubuntu
-sudo dpkg -i MeshCore-Desktop_0.1.0_amd64.deb
+sudo dpkg -i MeshCore.Desktop_0.1.0_amd64.deb
 
-# Fedora/RHEL
-sudo rpm -i MeshCore-Desktop-0.1.0-1.x86_64.rpm
+# Or AppImage (no installation required)
+chmod +x MeshCore.Desktop_0.1.0_amd64.AppImage
+./MeshCore.Desktop_0.1.0_amd64.AppImage
 ```
 
 ### Windows
 
-Download the `.exe` from [Releases](https://github.com/mdphoto/meshcore-desktop/releases) and run the installer.
+Run `MeshCore.Desktop_0.1.0_x64-setup.exe` and follow the installer.
 
 ### macOS
 
-Download the `.dmg` from [Releases](https://github.com/mdphoto/meshcore-desktop/releases), open it and drag the app to Applications.
+Open the `.dmg` and drag MeshCore Desktop to Applications.
 
 ## Building from source
 
