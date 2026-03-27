@@ -15,7 +15,9 @@ impl Database {
     /// Ouvre ou crée la base de données au chemin donné
     pub fn open(path: &Path) -> Result<Self, StorageError> {
         let conn = Connection::open(path)?;
-        let db = Self { conn: Mutex::new(conn) };
+        let db = Self {
+            conn: Mutex::new(conn),
+        };
         db.run_migrations()?;
         info!("Base de données ouverte : {}", path.display());
         Ok(db)
@@ -24,7 +26,9 @@ impl Database {
     /// Crée une base de données en mémoire (pour les tests)
     pub fn in_memory() -> Result<Self, StorageError> {
         let conn = Connection::open_in_memory()?;
-        let db = Self { conn: Mutex::new(conn) };
+        let db = Self {
+            conn: Mutex::new(conn),
+        };
         db.run_migrations()?;
         Ok(db)
     }
@@ -34,12 +38,18 @@ impl Database {
     where
         F: FnOnce(&Connection) -> Result<R, StorageError>,
     {
-        let conn = self.conn.lock().map_err(|e| StorageError::Migration(e.to_string()))?;
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| StorageError::Migration(e.to_string()))?;
         f(&conn)
     }
 
     fn run_migrations(&self) -> Result<(), StorageError> {
-        let conn = self.conn.lock().map_err(|e| StorageError::Migration(e.to_string()))?;
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| StorageError::Migration(e.to_string()))?;
         conn.execute_batch(
             "
             CREATE TABLE IF NOT EXISTS contacts (
@@ -105,8 +115,9 @@ impl Database {
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             );
-            "
-        ).map_err(|e| StorageError::Migration(e.to_string()))?;
+            ",
+        )
+        .map_err(|e| StorageError::Migration(e.to_string()))?;
 
         info!("Migrations appliquées");
         Ok(())
@@ -124,15 +135,16 @@ mod tests {
     #[test]
     fn test_open_in_memory() {
         let db = Database::in_memory().unwrap();
-        let count = db.with_conn(|conn| {
-            let count: i64 = conn
-                .query_row(
+        let count = db
+            .with_conn(|conn| {
+                let count: i64 = conn.query_row(
                     "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='contacts'",
                     [],
                     |row| row.get(0),
                 )?;
-            Ok(count)
-        }).unwrap();
+                Ok(count)
+            })
+            .unwrap();
         assert_eq!(count, 1);
     }
 }

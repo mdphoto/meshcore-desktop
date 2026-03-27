@@ -1,7 +1,7 @@
 use meshcore_service::AppState;
 use meshcore_transport::manager::ConnectionTarget;
-use tauri::State;
 use serde::Serialize;
+use tauri::State;
 
 /// Périphérique BLE découvert
 #[derive(Debug, Clone, Serialize)]
@@ -28,19 +28,36 @@ pub async fn scan_ble_devices(duration_secs: Option<u64>) -> Result<Vec<BleDevic
     // UUID du service NUS utilisé par MeshCore
     let meshcore_service_uuid = Uuid::from_u128(0x6e400001_b5a3_f393_e0a9_e50e24dcca9e);
 
-    let manager = Manager::new().await.map_err(|e| format!("Erreur BLE manager : {}", e))?;
-    let adapters = manager.adapters().await.map_err(|e| format!("Pas d'adaptateur BLE : {}", e))?;
-    let adapter = adapters.into_iter().next().ok_or("Aucun adaptateur Bluetooth trouvé")?;
+    let manager = Manager::new()
+        .await
+        .map_err(|e| format!("Erreur BLE manager : {}", e))?;
+    let adapters = manager
+        .adapters()
+        .await
+        .map_err(|e| format!("Pas d'adaptateur BLE : {}", e))?;
+    let adapter = adapters
+        .into_iter()
+        .next()
+        .ok_or("Aucun adaptateur Bluetooth trouvé")?;
 
     // Scanner avec le filtre service UUID MeshCore (comme meshcore-rs)
-    adapter.start_scan(ScanFilter {
-        services: vec![meshcore_service_uuid],
-    }).await.map_err(|e| format!("Erreur scan : {}", e))?;
+    adapter
+        .start_scan(ScanFilter {
+            services: vec![meshcore_service_uuid],
+        })
+        .await
+        .map_err(|e| format!("Erreur scan : {}", e))?;
 
     tokio::time::sleep(duration).await;
-    adapter.stop_scan().await.map_err(|e| format!("Erreur stop scan : {}", e))?;
+    adapter
+        .stop_scan()
+        .await
+        .map_err(|e| format!("Erreur stop scan : {}", e))?;
 
-    let peripherals = adapter.peripherals().await.map_err(|e| format!("Erreur listing : {}", e))?;
+    let peripherals = adapter
+        .peripherals()
+        .await
+        .map_err(|e| format!("Erreur listing : {}", e))?;
 
     let mut devices = Vec::new();
     for p in peripherals {
@@ -50,7 +67,11 @@ pub async fn scan_ble_devices(duration_secs: Option<u64>) -> Result<Vec<BleDevic
             let address = props.address.to_string();
             let rssi = props.rssi;
             if !name.is_empty() {
-                devices.push(BleDevice { name, address, rssi });
+                devices.push(BleDevice {
+                    name,
+                    address,
+                    rssi,
+                });
             }
         }
     }
@@ -66,7 +87,8 @@ pub async fn connect_serial(
     port: String,
     baud_rate: u32,
 ) -> Result<(), String> {
-    meshcore_service::connection::connect(&state, ConnectionTarget::Serial { port, baud_rate }).await
+    meshcore_service::connection::connect(&state, ConnectionTarget::Serial { port, baud_rate })
+        .await
 }
 
 #[tauri::command]
@@ -79,10 +101,7 @@ pub async fn connect_tcp(
 }
 
 #[tauri::command]
-pub async fn connect_ble(
-    state: State<'_, AppState>,
-    name_or_addr: String,
-) -> Result<(), String> {
+pub async fn connect_ble(state: State<'_, AppState>, name_or_addr: String) -> Result<(), String> {
     meshcore_service::connection::connect(&state, ConnectionTarget::Ble { name_or_addr }).await
 }
 
@@ -109,7 +128,8 @@ pub async fn pair_ble_device(address: String, pin: String) -> Result<String, Str
     // 1. Lancer un scan pour que BlueZ découvre le device
     // 2. Attendre qu'il apparaisse
     // 3. Pair + PIN + trust
-    let script = format!(r#"
+    let script = format!(
+        r#"
 {{
   echo "agent off"
   sleep 0.3
@@ -129,7 +149,10 @@ pub async fn pair_ble_device(address: String, pin: String) -> Result<String, Str
   sleep 1
   echo "quit"
 }} | bluetoothctl 2>&1
-"#, addr = address, pin = pin);
+"#,
+        addr = address,
+        pin = pin
+    );
 
     let output = Command::new("bash")
         .arg("-c")
@@ -140,8 +163,12 @@ pub async fn pair_ble_device(address: String, pin: String) -> Result<String, Str
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     // Nettoyer les codes ANSI pour les logs
-    let clean = stdout.replace("\x1b[0m", "").replace("\x1b[0;94m", "")
-        .replace("\x1b[0;92m", "").replace("\x1b[1;39m", "").replace("\x1b[K;9", "");
+    let clean = stdout
+        .replace("\x1b[0m", "")
+        .replace("\x1b[0;94m", "")
+        .replace("\x1b[0;92m", "")
+        .replace("\x1b[1;39m", "")
+        .replace("\x1b[K;9", "");
 
     tracing::info!("bluetoothctl output:\n{}", clean);
 
@@ -180,7 +207,9 @@ pub async fn disconnect_by_id(
     connection_id: String,
 ) -> Result<(), String> {
     let mut conn = state.connection.write().await;
-    conn.disconnect_by_id(&connection_id).await.map_err(|e| e.to_string())
+    conn.disconnect_by_id(&connection_id)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// Sélectionne une connexion comme primaire
@@ -195,21 +224,23 @@ pub async fn set_primary_connection(
 
 /// Liste toutes les connexions actives
 #[tauri::command]
-pub async fn list_connections(
-    state: State<'_, AppState>,
-) -> Result<Vec<ConnectionInfo>, String> {
+pub async fn list_connections(state: State<'_, AppState>) -> Result<Vec<ConnectionInfo>, String> {
     let conn = state.connection.read().await;
-    Ok(conn.list_connections().iter().map(|(id, target, is_primary)| {
-        ConnectionInfo {
+    Ok(conn
+        .list_connections()
+        .iter()
+        .map(|(id, target, is_primary)| ConnectionInfo {
             id: id.clone(),
             label: match target {
                 ConnectionTarget::Ble { name_or_addr } => format!("BLE: {}", name_or_addr),
-                ConnectionTarget::Serial { port, baud_rate } => format!("Serial: {} @ {}", port, baud_rate),
+                ConnectionTarget::Serial { port, baud_rate } => {
+                    format!("Serial: {} @ {}", port, baud_rate)
+                }
                 ConnectionTarget::Tcp { host, port } => format!("TCP: {}:{}", host, port),
             },
             is_primary: *is_primary,
-        }
-    }).collect())
+        })
+        .collect())
 }
 
 /// Info d'une connexion active (sérialisable pour le frontend)

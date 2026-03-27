@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 use std::fs;
-use std::io::{Read, Cursor};
+use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use tracing::{info, warn};
@@ -151,14 +151,16 @@ impl SrtmCache {
             .call()
             .map_err(|e| format!("HTTP error: {}", e))?;
 
-        let compressed = resp.into_body()
+        let compressed = resp
+            .into_body()
             .read_to_vec()
             .map_err(|e| format!("Read error: {}", e))?;
 
         // Décompresser gzip
         let mut decoder = flate2::read::GzDecoder::new(Cursor::new(compressed));
         let mut data = Vec::new();
-        decoder.read_to_end(&mut data)
+        decoder
+            .read_to_end(&mut data)
             .map_err(|e| format!("Décompression error: {}", e))?;
 
         Ok(data)
@@ -172,7 +174,11 @@ impl SrtmCache {
     fn parse_hgt_bytes(&self, data: &[u8]) -> Option<Vec<i16>> {
         let expected = SRTM_SIZE * SRTM_SIZE * 2;
         if data.len() != expected {
-            warn!("Taille tuile SRTM invalide : {} (attendu {})", data.len(), expected);
+            warn!(
+                "Taille tuile SRTM invalide : {} (attendu {})",
+                data.len(),
+                expected
+            );
             return None;
         }
 
@@ -189,8 +195,12 @@ impl SrtmCache {
 /// Calcule la ligne de vue entre deux points
 pub fn analyze_los(
     cache: &SrtmCache,
-    lat1: f64, lon1: f64, height1: f64,
-    lat2: f64, lon2: f64, height2: f64,
+    lat1: f64,
+    lon1: f64,
+    height1: f64,
+    lat2: f64,
+    lon2: f64,
+    height2: f64,
     freq_mhz: f64,
     num_samples: usize,
 ) -> LosResult {
@@ -212,7 +222,8 @@ pub fn analyze_los(
 
         // Ligne de vue directe (avec courbure de la Terre)
         let earth_curvature = earth_curvature_correction(d, distance);
-        let los_height = height1 + (height2 - height1) * t
+        let los_height = height1
+            + (height2 - height1) * t
             + cache.get_elevation(lat1, lon1).unwrap_or(0.0) * (1.0 - t)
             + cache.get_elevation(lat2, lon2).unwrap_or(0.0) * t
             - earth_curvature;
@@ -281,7 +292,9 @@ fn earth_curvature_correction(d: f64, total_d: f64) -> f64 {
 fn fresnel_radius(freq_mhz: f64, d1: f64, d2: f64) -> f64 {
     let wavelength = 300.0 / freq_mhz; // longueur d'onde en mètres
     let total = d1 + d2;
-    if total <= 0.0 { return 0.0; }
+    if total <= 0.0 {
+        return 0.0;
+    }
     (wavelength * d1 * d2 / total).sqrt()
 }
 
@@ -289,7 +302,13 @@ fn fresnel_radius(freq_mhz: f64, d1: f64, d2: f64) -> f64 {
 fn srtm_filename(lat: i16, lon: i16) -> String {
     let ns = if lat >= 0 { 'N' } else { 'S' };
     let ew = if lon >= 0 { 'E' } else { 'W' };
-    format!("{}{:02}{}{:03}.hgt", ns, lat.unsigned_abs(), ew, lon.unsigned_abs())
+    format!(
+        "{}{:02}{}{:03}.hgt",
+        ns,
+        lat.unsigned_abs(),
+        ew,
+        lon.unsigned_abs()
+    )
 }
 
 /// Nom du répertoire SRTM (ex: "N44" pour la latitude 44)

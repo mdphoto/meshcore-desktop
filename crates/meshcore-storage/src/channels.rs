@@ -1,7 +1,7 @@
 //! Opérations CRUD pour les canaux
 
 use crate::StorageError;
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,8 +24,12 @@ pub fn upsert_channel(conn: &Connection, channel: &StoredChannel) -> Result<(), 
             psk = excluded.psk,
             notifications_enabled = excluded.notifications_enabled",
         params![
-            channel.idx, channel.name, channel.channel_type,
-            channel.psk, channel.notifications_enabled, channel.unread_count,
+            channel.idx,
+            channel.name,
+            channel.channel_type,
+            channel.psk,
+            channel.notifications_enabled,
+            channel.unread_count,
         ],
     )?;
     Ok(())

@@ -1,10 +1,13 @@
 //! Opérations CRUD pour les companions (dispositifs connus)
 
-use crate::models::StoredCompanion;
 use crate::StorageError;
-use rusqlite::{params, Connection};
+use crate::models::StoredCompanion;
+use rusqlite::{Connection, params};
 
-pub fn upsert_companion(conn: &Connection, companion: &StoredCompanion) -> Result<(), StorageError> {
+pub fn upsert_companion(
+    conn: &Connection,
+    companion: &StoredCompanion,
+) -> Result<(), StorageError> {
     conn.execute(
         "INSERT INTO companions (transport_type, name, address, pin, last_used)
          VALUES (?1, ?2, ?3, ?4, ?5)
@@ -13,8 +16,11 @@ pub fn upsert_companion(conn: &Connection, companion: &StoredCompanion) -> Resul
             pin = excluded.pin,
             last_used = excluded.last_used",
         params![
-            companion.transport_type, companion.name, companion.address,
-            companion.pin, companion.last_used,
+            companion.transport_type,
+            companion.name,
+            companion.address,
+            companion.pin,
+            companion.last_used,
         ],
     )?;
     Ok(())

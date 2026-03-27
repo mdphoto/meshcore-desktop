@@ -2,12 +2,12 @@
 //!
 //! Gère le stockage des contacts, messages, canaux, companions et paramètres.
 
-pub mod db;
-pub mod models;
-pub mod contacts;
-pub mod messages;
 pub mod channels;
 pub mod companions;
+pub mod contacts;
+pub mod db;
+pub mod messages;
+pub mod models;
 pub mod settings;
 
 pub use db::Database;

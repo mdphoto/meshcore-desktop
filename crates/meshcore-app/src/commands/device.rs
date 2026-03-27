@@ -1,6 +1,6 @@
+use meshcore_protocol::types::BatteryChemistry;
 use meshcore_service::AppState;
 use meshcore_service::device::DeviceInfoSummary;
-use meshcore_protocol::types::BatteryChemistry;
 use tauri::State;
 
 #[tauri::command]
@@ -9,7 +9,10 @@ pub async fn get_device_info(state: State<'_, AppState>) -> Result<DeviceInfoSum
 }
 
 #[tauri::command]
-pub async fn get_battery(state: State<'_, AppState>, chemistry: String) -> Result<(u16, u8), String> {
+pub async fn get_battery(
+    state: State<'_, AppState>,
+    chemistry: String,
+) -> Result<(u16, u8), String> {
     let chem = match chemistry.as_str() {
         "lipo" => BatteryChemistry::LiPo,
         "lifepo4" => BatteryChemistry::LiFePO4,

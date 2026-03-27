@@ -1,7 +1,7 @@
 //! Reconnexion automatique avec backoff exponentiel
 
-use crate::manager::{ConnectionManager, ConnectionTarget};
 use crate::TransportError;
+use crate::manager::{ConnectionManager, ConnectionTarget};
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{info, warn};

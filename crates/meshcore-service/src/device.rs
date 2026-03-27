@@ -1,7 +1,7 @@
 //! Service de gestion du dispositif
 
-use crate::state::AppState;
 use crate::events::AppEvent;
+use crate::state::AppState;
 use meshcore_protocol::types::BatteryChemistry;
 use tracing::info;
 
@@ -25,13 +25,25 @@ pub async fn get_device_info(state: &AppState) -> Result<DeviceInfoSummary, Stri
     })
 }
 
-pub async fn get_battery(state: &AppState, chemistry: BatteryChemistry) -> Result<(u16, u8), String> {
+pub async fn get_battery(
+    state: &AppState,
+    chemistry: BatteryChemistry,
+) -> Result<(u16, u8), String> {
     let conn = state.connection.read().await;
     let mc = conn.meshcore().ok_or("Non connecté")?;
-    let battery = mc.commands().lock().await.get_bat().await.map_err(|e| e.to_string())?;
+    let battery = mc
+        .commands()
+        .lock()
+        .await
+        .get_bat()
+        .await
+        .map_err(|e| e.to_string())?;
     let mv = battery.battery_mv;
     let percent = chemistry.percentage(mv);
-    state.emit(AppEvent::BatteryUpdate { millivolts: mv, percent });
+    state.emit(AppEvent::BatteryUpdate {
+        millivolts: mv,
+        percent,
+    });
     Ok((mv, percent))
 }
 
@@ -42,7 +54,12 @@ pub async fn sync_time(state: &AppState) -> Result<(), String> {
         .duration_since(std::time::UNIX_EPOCH)
         .map_err(|e| e.to_string())?
         .as_secs() as u32;
-    mc.commands().lock().await.set_time(now).await.map_err(|e| e.to_string())?;
+    mc.commands()
+        .lock()
+        .await
+        .set_time(now)
+        .await
+        .map_err(|e| e.to_string())?;
     info!("Horloge synchronisée : {}", now);
     Ok(())
 }
@@ -50,21 +67,36 @@ pub async fn sync_time(state: &AppState) -> Result<(), String> {
 pub async fn set_tx_power(state: &AppState, power: u8) -> Result<(), String> {
     let conn = state.connection.read().await;
     let mc = conn.meshcore().ok_or("Non connecté")?;
-    mc.commands().lock().await.set_tx_power(power).await.map_err(|e| e.to_string())?;
+    mc.commands()
+        .lock()
+        .await
+        .set_tx_power(power)
+        .await
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
 pub async fn set_device_name(state: &AppState, name: &str) -> Result<(), String> {
     let conn = state.connection.read().await;
     let mc = conn.meshcore().ok_or("Non connecté")?;
-    mc.commands().lock().await.set_name(name).await.map_err(|e| e.to_string())?;
+    mc.commands()
+        .lock()
+        .await
+        .set_name(name)
+        .await
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
 pub async fn reboot(state: &AppState) -> Result<(), String> {
     let conn = state.connection.read().await;
     let mc = conn.meshcore().ok_or("Non connecté")?;
-    mc.commands().lock().await.reboot().await.map_err(|e| e.to_string())?;
+    mc.commands()
+        .lock()
+        .await
+        .reboot()
+        .await
+        .map_err(|e| e.to_string())?;
     state.emit(AppEvent::Disconnected);
     Ok(())
 }

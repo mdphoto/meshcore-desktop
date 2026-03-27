@@ -22,9 +22,6 @@ pub fn toggle_favorite(
 }
 
 #[tauri::command]
-pub async fn delete_contact(
-    state: State<'_, AppState>,
-    public_key: String,
-) -> Result<(), String> {
+pub async fn delete_contact(state: State<'_, AppState>, public_key: String) -> Result<(), String> {
     meshcore_service::contacts::delete_contact(&state, &public_key).await
 }

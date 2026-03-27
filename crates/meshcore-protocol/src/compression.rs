@@ -18,8 +18,8 @@ pub fn compress(text: &str) -> Vec<u8> {
 /// Décompresse un message (détecte automatiquement le préfixe SMAZ)
 pub fn decompress(data: &[u8]) -> Result<String, DecompressError> {
     if data.starts_with(SMAZ_PREFIX.as_bytes()) {
-        let decompressed = smaz::decompress(&data[SMAZ_PREFIX.len()..])
-            .map_err(DecompressError::Smaz)?;
+        let decompressed =
+            smaz::decompress(&data[SMAZ_PREFIX.len()..]).map_err(DecompressError::Smaz)?;
         String::from_utf8(decompressed).map_err(DecompressError::Utf8)
     } else {
         String::from_utf8(data.to_vec()).map_err(DecompressError::Utf8)

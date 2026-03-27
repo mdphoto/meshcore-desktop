@@ -1,7 +1,7 @@
 //! Service de messagerie : envoi, réception, retry, statut
 
-use crate::state::AppState;
 use crate::events::AppEvent;
+use crate::state::AppState;
 use meshcore_storage::messages;
 use meshcore_storage::models::StoredMessage;
 use tracing::info;
@@ -15,21 +15,32 @@ pub async fn send_direct_message(
     let msg = StoredMessage::new_outgoing(recipient_pubkey, text);
     let msg_id = msg.id.clone();
 
-    state.db.with_conn(|conn| messages::insert_message(conn, &msg))
+    state
+        .db
+        .with_conn(|conn| messages::insert_message(conn, &msg))
         .map_err(|e| e.to_string())?;
 
     let conn = state.connection.read().await;
     if let Some(mc) = conn.meshcore() {
-        mc.commands().lock().await
+        mc.commands()
+            .lock()
+            .await
             .send_msg(recipient_pubkey, text, None)
             .await
             .map_err(|e| e.to_string())?;
 
-        state.db.with_conn(|c| messages::update_message_status(c, &msg_id, "sent"))
+        state
+            .db
+            .with_conn(|c| messages::update_message_status(c, &msg_id, "sent"))
             .map_err(|e| e.to_string())?;
 
-        state.emit(AppEvent::MessageSent { message_id: msg_id.clone() });
-        info!("Message envoyé à {}", &recipient_pubkey[..12.min(recipient_pubkey.len())]);
+        state.emit(AppEvent::MessageSent {
+            message_id: msg_id.clone(),
+        });
+        info!(
+            "Message envoyé à {}",
+            &recipient_pubkey[..12.min(recipient_pubkey.len())]
+        );
     } else {
         return Err("Non connecté".to_string());
     }
@@ -46,20 +57,28 @@ pub async fn send_channel_message(
     let msg = StoredMessage::new_channel_outgoing(channel_idx, text);
     let msg_id = msg.id.clone();
 
-    state.db.with_conn(|conn| messages::insert_message(conn, &msg))
+    state
+        .db
+        .with_conn(|conn| messages::insert_message(conn, &msg))
         .map_err(|e| e.to_string())?;
 
     let conn = state.connection.read().await;
     if let Some(mc) = conn.meshcore() {
-        mc.commands().lock().await
+        mc.commands()
+            .lock()
+            .await
             .send_channel_msg(channel_idx, text, None)
             .await
             .map_err(|e| e.to_string())?;
 
-        state.db.with_conn(|c| messages::update_message_status(c, &msg_id, "sent"))
+        state
+            .db
+            .with_conn(|c| messages::update_message_status(c, &msg_id, "sent"))
             .map_err(|e| e.to_string())?;
 
-        state.emit(AppEvent::MessageSent { message_id: msg_id.clone() });
+        state.emit(AppEvent::MessageSent {
+            message_id: msg_id.clone(),
+        });
     } else {
         return Err("Non connecté".to_string());
     }
@@ -74,7 +93,9 @@ pub fn get_direct_messages(
     limit: u32,
     offset: u32,
 ) -> Result<Vec<StoredMessage>, String> {
-    state.db.with_conn(|conn| messages::get_direct_messages(conn, contact_pubkey, limit, offset))
+    state
+        .db
+        .with_conn(|conn| messages::get_direct_messages(conn, contact_pubkey, limit, offset))
         .map_err(|e| e.to_string())
 }
 
@@ -85,6 +106,8 @@ pub fn get_channel_messages(
     limit: u32,
     offset: u32,
 ) -> Result<Vec<StoredMessage>, String> {
-    state.db.with_conn(|conn| messages::get_channel_messages(conn, channel_idx, limit, offset))
+    state
+        .db
+        .with_conn(|conn| messages::get_channel_messages(conn, channel_idx, limit, offset))
         .map_err(|e| e.to_string())
 }

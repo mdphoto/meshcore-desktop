@@ -1,9 +1,9 @@
 //! Service de connexion : gère le cycle de vie de la connexion au dispositif
 
-use crate::state::AppState;
 use crate::events::AppEvent;
+use crate::state::AppState;
+use meshcore_rs::events::{EventPayload, EventType};
 use meshcore_transport::manager::ConnectionTarget;
-use meshcore_rs::events::{EventType, EventPayload};
 use std::collections::HashMap;
 use tracing::info;
 
@@ -19,7 +19,9 @@ pub async fn connect(state: &AppState, target: ConnectionTarget) -> Result<(), S
     let mut conn = state.connection.write().await;
     conn.connect(target).await.map_err(|e| e.to_string())?;
 
-    let mc = conn.meshcore().ok_or("Connexion établie mais pas de MeshCore")?;
+    let mc = conn
+        .meshcore()
+        .ok_or("Connexion établie mais pas de MeshCore")?;
     let cmds = mc.commands();
 
     // Stabilisation BLE
@@ -27,14 +29,23 @@ pub async fn connect(state: &AppState, target: ConnectionTarget) -> Result<(), S
     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
     // Augmenter le timeout par défaut (5s trop court pour BLE multi-hop)
-    mc.set_default_timeout(std::time::Duration::from_secs(30)).await;
+    mc.set_default_timeout(std::time::Duration::from_secs(30))
+        .await;
 
     // APP_START → nom du device
     info!("Handshake: send_appstart...");
     let device_name = match cmds.lock().await.send_appstart().await {
         Ok(si) => {
-            info!("Device: {} (pubkey: {}...)", si.name, meshcore_rs::parsing::hex_encode(&si.public_key[..4]));
-            if si.name.is_empty() { default_name.clone() } else { si.name.clone() }
+            info!(
+                "Device: {} (pubkey: {}...)",
+                si.name,
+                meshcore_rs::parsing::hex_encode(&si.public_key[..4])
+            );
+            if si.name.is_empty() {
+                default_name.clone()
+            } else {
+                si.name.clone()
+            }
         }
         Err(e) => {
             info!("send_appstart échoué : {}", e);
@@ -63,9 +74,11 @@ pub async fn connect(state: &AppState, target: ConnectionTarget) -> Result<(), S
                     notifications_enabled: true,
                     unread_count: 0,
                 };
-                let _ = state.db.with_conn(|c| meshcore_storage::channels::upsert_channel(c, &stored));
+                let _ = state
+                    .db
+                    .with_conn(|c| meshcore_storage::channels::upsert_channel(c, &stored));
             }
-            Ok(_) => {} // Canal vide
+            Ok(_) => {}      // Canal vide
             Err(_) => break, // Plus de canaux
         }
     }
@@ -86,7 +99,8 @@ pub async fn connect(state: &AppState, target: ConnectionTarget) -> Result<(), S
                 snr: msg.snr,
             });
         }
-    }).await;
+    })
+    .await;
 
     let tx_ch = state_tx.clone();
     mc.subscribe(EventType::ChannelMsgRecv, HashMap::new(), move |event| {
@@ -97,7 +111,8 @@ pub async fn connect(state: &AppState, target: ConnectionTarget) -> Result<(), S
                 text: msg.text.clone(),
             });
         }
-    }).await;
+    })
+    .await;
 
     let tx_contact = state_tx.clone();
     mc.subscribe(EventType::NewContact, HashMap::new(), move |event| {
@@ -109,23 +124,26 @@ pub async fn connect(state: &AppState, target: ConnectionTarget) -> Result<(), S
                 node_type: contact.contact_type,
             });
         }
-    }).await;
+    })
+    .await;
 
     drop(conn);
 
     // Émettre Connected — le frontend réagit immédiatement
-    state.emit(AppEvent::Connected { device_name: device_name.clone() });
-    info!("Connecté à {} — prêt (contacts à charger via sync)", device_name);
+    state.emit(AppEvent::Connected {
+        device_name: device_name.clone(),
+    });
+    info!(
+        "Connecté à {} — prêt (contacts à charger via sync)",
+        device_name
+    );
     Ok(())
 }
 
 /// Déconnecte du dispositif
 pub async fn disconnect(state: &AppState) -> Result<(), String> {
     let mut conn = state.connection.write().await;
-    match tokio::time::timeout(
-        std::time::Duration::from_secs(5),
-        conn.disconnect()
-    ).await {
+    match tokio::time::timeout(std::time::Duration::from_secs(5), conn.disconnect()).await {
         Ok(Ok(())) => info!("Déconnecté proprement"),
         Ok(Err(e)) => info!("Erreur déconnexion (ignorée) : {}", e),
         Err(_) => info!("Timeout déconnexion — forçage"),

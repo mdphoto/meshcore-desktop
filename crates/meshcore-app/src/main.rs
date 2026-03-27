@@ -27,8 +27,8 @@ fn main() {
                 .app_data_dir()
                 .expect("Impossible de déterminer le répertoire de données");
 
-            let state = AppState::new(data_dir)
-                .expect("Impossible d'initialiser l'état de l'application");
+            let state =
+                AppState::new(data_dir).expect("Impossible d'initialiser l'état de l'application");
 
             // Pont événements : broadcast Rust → stockage DB + émission Tauri frontend
             let mut rx = state.subscribe();
@@ -41,7 +41,12 @@ fn main() {
                     // Stocker les messages reçus en DB
                     if let Some(ref db) = db {
                         match event {
-                            meshcore_service::AppEvent::DirectMessageReceived { sender_pubkey, sender_name, text, snr } => {
+                            meshcore_service::AppEvent::DirectMessageReceived {
+                                sender_pubkey,
+                                sender_name,
+                                text,
+                                snr,
+                            } => {
                                 let msg = meshcore_storage::models::StoredMessage {
                                     id: uuid::Uuid::new_v4().to_string(),
                                     direction: "incoming".to_string(),
@@ -59,9 +64,15 @@ fn main() {
                                     reply_to: None,
                                     reaction: None,
                                 };
-                                let _ = db.with_conn(|c| meshcore_storage::messages::insert_message(c, &msg));
+                                let _ = db.with_conn(|c| {
+                                    meshcore_storage::messages::insert_message(c, &msg)
+                                });
                             }
-                            meshcore_service::AppEvent::ChannelMessageReceived { channel_idx, sender_name, text } => {
+                            meshcore_service::AppEvent::ChannelMessageReceived {
+                                channel_idx,
+                                sender_name,
+                                text,
+                            } => {
                                 let msg = meshcore_storage::models::StoredMessage {
                                     id: uuid::Uuid::new_v4().to_string(),
                                     direction: "incoming".to_string(),
@@ -79,7 +90,9 @@ fn main() {
                                     reply_to: None,
                                     reaction: None,
                                 };
-                                let _ = db.with_conn(|c| meshcore_storage::messages::insert_message(c, &msg));
+                                let _ = db.with_conn(|c| {
+                                    meshcore_storage::messages::insert_message(c, &msg)
+                                });
                             }
                             _ => {}
                         }

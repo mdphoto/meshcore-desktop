@@ -1,9 +1,9 @@
-pub mod connection;
-pub mod messaging;
-pub mod contacts;
-pub mod channels;
-pub mod device;
-pub mod companions;
-pub mod settings;
 pub mod analysis;
+pub mod channels;
+pub mod companions;
+pub mod connection;
+pub mod contacts;
+pub mod device;
+pub mod messaging;
 pub mod repeater;
+pub mod settings;

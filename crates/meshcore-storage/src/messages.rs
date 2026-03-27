@@ -1,8 +1,8 @@
 //! Opérations CRUD pour les messages
 
-use crate::models::StoredMessage;
 use crate::StorageError;
-use rusqlite::{params, Connection};
+use crate::models::StoredMessage;
+use rusqlite::{Connection, params};
 
 /// Insère un nouveau message
 pub fn insert_message(conn: &Connection, msg: &StoredMessage) -> Result<(), StorageError> {
@@ -20,7 +20,11 @@ pub fn insert_message(conn: &Connection, msg: &StoredMessage) -> Result<(), Stor
 }
 
 /// Met à jour le statut d'un message
-pub fn update_message_status(conn: &Connection, id: &str, status: &str) -> Result<(), StorageError> {
+pub fn update_message_status(
+    conn: &Connection,
+    id: &str,
+    status: &str,
+) -> Result<(), StorageError> {
     conn.execute(
         "UPDATE messages SET status = ?1 WHERE id = ?2",
         params![status, id],
@@ -41,7 +45,7 @@ pub fn get_direct_messages(
          FROM messages
          WHERE (sender_pubkey = ?1 OR recipient_pubkey = ?1) AND channel_idx IS NULL
          ORDER BY timestamp DESC
-         LIMIT ?2 OFFSET ?3"
+         LIMIT ?2 OFFSET ?3",
     )?;
 
     let messages = stmt
@@ -64,7 +68,7 @@ pub fn get_channel_messages(
          FROM messages
          WHERE channel_idx = ?1
          ORDER BY timestamp DESC
-         LIMIT ?2 OFFSET ?3"
+         LIMIT ?2 OFFSET ?3",
     )?;
 
     let messages = stmt
@@ -111,7 +115,7 @@ pub fn search_messages(
          FROM messages
          WHERE text LIKE ?1
          ORDER BY timestamp DESC
-         LIMIT ?2"
+         LIMIT ?2",
     )?;
 
     let messages = stmt
@@ -154,7 +158,9 @@ mod tests {
 
         db.with_conn(|conn| insert_message(conn, &msg)).unwrap();
 
-        let messages = db.with_conn(|conn| get_direct_messages(conn, "pubkey123", 50, 0)).unwrap();
+        let messages = db
+            .with_conn(|conn| get_direct_messages(conn, "pubkey123", 50, 0))
+            .unwrap();
         assert_eq!(messages.len(), 1);
         assert_eq!(messages[0].text, "Bonjour mesh !");
     }
@@ -165,9 +171,12 @@ mod tests {
         let msg = StoredMessage::new_outgoing("pubkey123", "test");
 
         db.with_conn(|conn| insert_message(conn, &msg)).unwrap();
-        db.with_conn(|conn| update_message_status(conn, &msg.id, "delivered")).unwrap();
+        db.with_conn(|conn| update_message_status(conn, &msg.id, "delivered"))
+            .unwrap();
 
-        let messages = db.with_conn(|conn| get_direct_messages(conn, "pubkey123", 50, 0)).unwrap();
+        let messages = db
+            .with_conn(|conn| get_direct_messages(conn, "pubkey123", 50, 0))
+            .unwrap();
         assert_eq!(messages[0].status, "delivered");
     }
 }

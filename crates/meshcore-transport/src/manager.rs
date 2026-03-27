@@ -4,8 +4,8 @@
 //! pour la connexion, la déconnexion et l'envoi de commandes.
 //! Supporte les connexions simultanées via plusieurs slots nommés.
 
-use meshcore_rs::MeshCore;
 use crate::TransportError;
+use meshcore_rs::MeshCore;
 use std::collections::HashMap;
 use tracing::info;
 
@@ -62,21 +62,15 @@ impl ConnectionManager {
         info!("Connexion à {:?} (id: {})", target, id);
 
         let mc = match &target {
-            ConnectionTarget::Serial { port, baud_rate } => {
-                MeshCore::serial(port, *baud_rate)
-                    .await
-                    .map_err(|e| TransportError::Serial(e.to_string()))?
-            }
-            ConnectionTarget::Tcp { host, port } => {
-                MeshCore::tcp(host, *port)
-                    .await
-                    .map_err(|e| TransportError::Tcp(e.to_string()))?
-            }
-            ConnectionTarget::Ble { name_or_addr } => {
-                MeshCore::ble_connect(name_or_addr)
-                    .await
-                    .map_err(|e| TransportError::Ble(e.to_string()))?
-            }
+            ConnectionTarget::Serial { port, baud_rate } => MeshCore::serial(port, *baud_rate)
+                .await
+                .map_err(|e| TransportError::Serial(e.to_string()))?,
+            ConnectionTarget::Tcp { host, port } => MeshCore::tcp(host, *port)
+                .await
+                .map_err(|e| TransportError::Tcp(e.to_string()))?,
+            ConnectionTarget::Ble { name_or_addr } => MeshCore::ble_connect(name_or_addr)
+                .await
+                .map_err(|e| TransportError::Ble(e.to_string()))?,
         };
 
         // Si c'est la première connexion, elle devient primaire
@@ -84,8 +78,18 @@ impl ConnectionManager {
             self.primary_id = Some(id.clone());
         }
 
-        self.connections.insert(id.clone(), ActiveConnection { meshcore: mc, target });
-        info!("Connecté (id: {}), total: {} connexion(s)", id, self.connections.len());
+        self.connections.insert(
+            id.clone(),
+            ActiveConnection {
+                meshcore: mc,
+                target,
+            },
+        );
+        info!(
+            "Connecté (id: {}), total: {} connexion(s)",
+            id,
+            self.connections.len()
+        );
         Ok(())
     }
 

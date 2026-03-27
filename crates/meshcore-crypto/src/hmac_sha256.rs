@@ -7,8 +7,7 @@ type HmacSha256 = Hmac<Sha256>;
 
 /// Calcule un HMAC-SHA256
 pub fn hmac_sha256(key: &[u8], data: &[u8]) -> [u8; 32] {
-    let mut mac = HmacSha256::new_from_slice(key)
-        .expect("HMAC accepte des clés de toute taille");
+    let mut mac = HmacSha256::new_from_slice(key).expect("HMAC accepte des clés de toute taille");
     mac.update(data);
     let result = mac.finalize();
     result.into_bytes().into()
@@ -23,7 +22,7 @@ pub fn hmac_sha256_verify(key: &[u8], data: &[u8], expected: &[u8; 32]) -> bool 
 
 /// Dérive un PSK de canal hashtag à partir du nom (SHA-256, premiers 16 octets)
 pub fn derive_hashtag_psk(name: &str) -> [u8; 16] {
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest, Sha256};
     let hash = Sha256::digest(name.as_bytes());
     let mut psk = [0u8; 16];
     psk.copy_from_slice(&hash[..16]);
@@ -55,9 +54,9 @@ mod tests {
         // RFC 4231 Test Case 1
         let key = [0x0b; 20];
         let data = b"Hi There";
-        let expected = hex::decode(
-            "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7"
-        ).unwrap();
+        let expected =
+            hex::decode("b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7")
+                .unwrap();
 
         let result = hmac_sha256(&key, data);
         assert_eq!(result, expected.as_slice());

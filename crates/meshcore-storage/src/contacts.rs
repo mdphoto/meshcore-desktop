@@ -1,8 +1,8 @@
 //! Opérations CRUD pour les contacts
 
-use crate::models::StoredContact;
 use crate::StorageError;
-use rusqlite::{params, Connection};
+use crate::models::StoredContact;
+use rusqlite::{Connection, params};
 
 /// Insère ou met à jour un contact
 pub fn upsert_contact(conn: &Connection, contact: &StoredContact) -> Result<(), StorageError> {
@@ -67,7 +67,10 @@ pub fn get_all_contacts(conn: &Connection) -> Result<Vec<StoredContact>, Storage
 }
 
 /// Récupère un contact par clé publique
-pub fn get_contact(conn: &Connection, public_key: &str) -> Result<Option<StoredContact>, StorageError> {
+pub fn get_contact(
+    conn: &Connection,
+    public_key: &str,
+) -> Result<Option<StoredContact>, StorageError> {
     let mut stmt = conn.prepare(
         "SELECT public_key, name, node_type, flags, path, path_len, lat, lon, last_seen, is_favorite, group_name
          FROM contacts WHERE public_key = ?1"
@@ -94,12 +97,19 @@ pub fn get_contact(conn: &Connection, public_key: &str) -> Result<Option<StoredC
 
 /// Supprime un contact
 pub fn delete_contact(conn: &Connection, public_key: &str) -> Result<bool, StorageError> {
-    let affected = conn.execute("DELETE FROM contacts WHERE public_key = ?1", params![public_key])?;
+    let affected = conn.execute(
+        "DELETE FROM contacts WHERE public_key = ?1",
+        params![public_key],
+    )?;
     Ok(affected > 0)
 }
 
 /// Met à jour le statut favori d'un contact
-pub fn set_favorite(conn: &Connection, public_key: &str, favorite: bool) -> Result<(), StorageError> {
+pub fn set_favorite(
+    conn: &Connection,
+    public_key: &str,
+    favorite: bool,
+) -> Result<(), StorageError> {
     conn.execute(
         "UPDATE contacts SET is_favorite = ?1, updated_at = datetime('now') WHERE public_key = ?2",
         params![favorite, public_key],
@@ -114,7 +124,8 @@ mod tests {
 
     fn test_contact() -> StoredContact {
         StoredContact {
-            public_key: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890".to_string(),
+            public_key: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+                .to_string(),
             name: "Test Node".to_string(),
             node_type: 1,
             flags: 0,
@@ -134,7 +145,10 @@ mod tests {
         let contact = test_contact();
 
         db.with_conn(|conn| upsert_contact(conn, &contact)).unwrap();
-        let fetched = db.with_conn(|conn| get_contact(conn, &contact.public_key)).unwrap().unwrap();
+        let fetched = db
+            .with_conn(|conn| get_contact(conn, &contact.public_key))
+            .unwrap()
+            .unwrap();
         assert_eq!(fetched.name, "Test Node");
     }
 
@@ -144,8 +158,15 @@ mod tests {
         let contact = test_contact();
 
         db.with_conn(|conn| upsert_contact(conn, &contact)).unwrap();
-        assert!(db.with_conn(|conn| delete_contact(conn, &contact.public_key)).unwrap());
-        assert!(db.with_conn(|conn| get_contact(conn, &contact.public_key)).unwrap().is_none());
+        assert!(
+            db.with_conn(|conn| delete_contact(conn, &contact.public_key))
+                .unwrap()
+        );
+        assert!(
+            db.with_conn(|conn| get_contact(conn, &contact.public_key))
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]
@@ -154,9 +175,13 @@ mod tests {
         let contact = test_contact();
 
         db.with_conn(|conn| upsert_contact(conn, &contact)).unwrap();
-        db.with_conn(|conn| set_favorite(conn, &contact.public_key, true)).unwrap();
+        db.with_conn(|conn| set_favorite(conn, &contact.public_key, true))
+            .unwrap();
 
-        let fetched = db.with_conn(|conn| get_contact(conn, &contact.public_key)).unwrap().unwrap();
+        let fetched = db
+            .with_conn(|conn| get_contact(conn, &contact.public_key))
+            .unwrap()
+            .unwrap();
         assert!(fetched.is_favorite);
     }
 }

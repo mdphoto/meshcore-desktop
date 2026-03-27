@@ -17,8 +17,12 @@ pub fn analyze_los(
 ) -> Result<LosResult, String> {
     let result = los::analyze_los(
         &state.srtm_cache,
-        lat1, lon1, ant_height1,
-        lat2, lon2, ant_height2,
+        lat1,
+        lon1,
+        ant_height1,
+        lat2,
+        lon2,
+        ant_height2,
         freq_mhz,
         200, // 200 points d'échantillonnage
     );

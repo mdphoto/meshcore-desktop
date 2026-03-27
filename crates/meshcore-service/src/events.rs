@@ -42,17 +42,18 @@ pub enum AppEvent {
         node_type: u8,
     },
     /// Mise à jour de chemin
-    PathUpdated {
-        pubkey_prefix: String,
-        path_len: i8,
-    },
+    PathUpdated { pubkey_prefix: String, path_len: i8 },
 
     /// Info batterie
     BatteryUpdate { millivolts: u16, percent: u8 },
     /// Info dispositif
     DeviceInfoReceived { name: String, fw_version: String },
     /// Statistiques radio
-    StatsReceived { noise_floor: i16, last_rssi: i16, snr: f32 },
+    StatsReceived {
+        noise_floor: i16,
+        last_rssi: i16,
+        snr: f32,
+    },
 
     /// Erreur
     Error { message: String },

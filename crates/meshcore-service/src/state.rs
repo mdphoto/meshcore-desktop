@@ -5,7 +5,7 @@ use crate::los::SrtmCache;
 use meshcore_storage::Database;
 use meshcore_transport::manager::ConnectionManager;
 use std::path::PathBuf;
-use tokio::sync::{broadcast, RwLock};
+use tokio::sync::{RwLock, broadcast};
 
 /// État partagé de l'application (Send + Sync)
 pub struct AppState {

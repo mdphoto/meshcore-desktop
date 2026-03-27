@@ -1,8 +1,6 @@
 //! Gestion des identités Ed25519 pour la signature des messages
 
-use ed25519_dalek::{
-    Signature, Signer, SigningKey, Verifier, VerifyingKey,
-};
+use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use rand::rngs::OsRng;
 
 /// Paire de clés Ed25519

@@ -1,7 +1,7 @@
 //! Stockage clé-valeur pour les paramètres de l'application
 
 use crate::StorageError;
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 
 pub fn set(conn: &Connection, key: &str, value: &str) -> Result<(), StorageError> {
     conn.execute(
