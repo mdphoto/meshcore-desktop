@@ -8,7 +8,7 @@ use aes::cipher::{BlockDecrypt, BlockEncrypt, KeyInit, generic_array::GenericArr
 /// Les données sont paddées avec des zéros pour atteindre un multiple de 16 octets.
 pub fn aes128_ecb_encrypt(key: &[u8; 16], plaintext: &[u8]) -> Vec<u8> {
     let cipher = Aes128::new(GenericArray::from_slice(key));
-    let padded_len = ((plaintext.len() + 15) / 16) * 16;
+    let padded_len = plaintext.len().div_ceil(16) * 16;
     let mut data = vec![0u8; padded_len];
     data[..plaintext.len()].copy_from_slice(plaintext);
 
@@ -21,7 +21,7 @@ pub fn aes128_ecb_encrypt(key: &[u8; 16], plaintext: &[u8]) -> Vec<u8> {
 
 /// Déchiffre des données avec AES-128-ECB
 pub fn aes128_ecb_decrypt(key: &[u8; 16], ciphertext: &[u8]) -> Result<Vec<u8>, AesError> {
-    if ciphertext.len() % 16 != 0 {
+    if !ciphertext.len().is_multiple_of(16) {
         return Err(AesError::InvalidLength(ciphertext.len()));
     }
 
