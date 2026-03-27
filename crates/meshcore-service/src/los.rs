@@ -81,9 +81,10 @@ impl SrtmCache {
 
         let mut tiles = self.tiles.lock().ok()?;
 
-        if !tiles.contains_key(&(tile_lat, tile_lon)) {
+        use std::collections::hash_map::Entry;
+        if let Entry::Vacant(e) = tiles.entry((tile_lat, tile_lon)) {
             if let Some(data) = self.load_tile(tile_lat, tile_lon) {
-                tiles.insert((tile_lat, tile_lon), data);
+                e.insert(data);
             } else {
                 return None;
             }
@@ -193,6 +194,7 @@ impl SrtmCache {
 }
 
 /// Calcule la ligne de vue entre deux points
+#[allow(clippy::too_many_arguments)]
 pub fn analyze_los(
     cache: &SrtmCache,
     lat1: f64,

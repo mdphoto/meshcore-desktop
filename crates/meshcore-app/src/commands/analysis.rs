@@ -5,6 +5,7 @@ use tauri::State;
 /// Analyse la ligne de vue entre deux points
 /// Retourne le profil d'élévation, la visibilité et les données Fresnel
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub fn analyze_los(
     state: State<'_, AppState>,
     lat1: f64,

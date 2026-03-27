@@ -7,7 +7,7 @@ use meshcore_storage::channels::StoredChannel;
 pub fn get_all_channels(state: &AppState) -> Result<Vec<StoredChannel>, String> {
     state
         .db
-        .with_conn(|conn| store::get_all_channels(conn))
+        .with_conn(store::get_all_channels)
         .map_err(|e| e.to_string())
 }
 

@@ -62,7 +62,7 @@ pub async fn sync_contacts(state: &AppState) -> Result<usize, String> {
 pub fn get_all_contacts(state: &AppState) -> Result<Vec<StoredContact>, String> {
     state
         .db
-        .with_conn(|conn| store::get_all_contacts(conn))
+        .with_conn(store::get_all_contacts)
         .map_err(|e| e.to_string())
 }
 

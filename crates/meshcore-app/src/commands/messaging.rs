@@ -88,6 +88,6 @@ pub async fn send_login(
 pub fn get_dm_contact_pubkeys(state: State<'_, AppState>) -> Result<Vec<String>, String> {
     state
         .db
-        .with_conn(|conn| meshcore_storage::messages::get_dm_contact_pubkeys(conn))
+        .with_conn(meshcore_storage::messages::get_dm_contact_pubkeys)
         .map_err(|e| e.to_string())
 }

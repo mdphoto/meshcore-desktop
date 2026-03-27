@@ -177,11 +177,11 @@ pub async fn pair_ble_device(address: String, pin: String) -> Result<String, Str
     } else if clean.contains("Already Paired") || clean.contains("already paired") {
         Ok(format!("Déjà appairé : {}", address))
     } else if clean.contains("Failed to pair") {
-        Err(format!("Échec de l'appairage — vérifiez le PIN"))
+        Err("Échec de l'appairage — vérifiez le PIN".to_string())
     } else if clean.contains("trust succeeded") {
         Ok(format!("Trust OK pour {}", address))
     } else {
-        Ok(format!("Appairage tenté — vérifiez les logs backend"))
+        Ok("Appairage tenté — vérifiez les logs backend".to_string())
     }
 }
 

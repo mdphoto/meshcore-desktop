@@ -21,6 +21,6 @@ pub fn set_setting(state: State<'_, AppState>, key: String, value: String) -> Re
 pub fn get_all_settings(state: State<'_, AppState>) -> Result<Vec<(String, String)>, String> {
     state
         .db
-        .with_conn(|conn| meshcore_storage::settings::get_all(conn))
+        .with_conn(meshcore_storage::settings::get_all)
         .map_err(|e| e.to_string())
 }
