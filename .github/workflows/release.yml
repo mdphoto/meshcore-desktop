@@ -10,7 +10,7 @@ env:
 
 jobs:
   build:
-    name: Build (${{ matrix.target }})
+    name: Build GUI (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -93,9 +93,69 @@ jobs:
           path: |
             target/${{ matrix.target }}/release/bundle/dmg/*.dmg
 
+  build-cli-arm64:
+    name: Build CLI (ARM64 Linux - Raspberry Pi)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+
+      - name: Install cross-compilation toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: linux-aarch64-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build meshcore-cli for ARM64
+        run: cargo build --release --target aarch64-unknown-linux-gnu --package meshcore-cli
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+          CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
+          CXX_aarch64_unknown_linux_gnu: aarch64-linux-gnu-g++
+
+      - name: Build meshcore-cli for x86_64 (Linux)
+        run: cargo build --release --package meshcore-cli
+
+      - name: Package ARM64 .deb
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          mkdir -p deb/DEBIAN deb/usr/bin
+          cp target/aarch64-unknown-linux-gnu/release/meshcore-cli deb/usr/bin/
+          cat > deb/DEBIAN/control << CTRL
+          Package: meshcore-cli
+          Version: ${VERSION}
+          Section: comm
+          Priority: optional
+          Architecture: arm64
+          Maintainer: Michel Dessenne
+          Description: MeshCore CLI for LoRa mesh networks
+           Command-line tool for communicating with MeshCore devices
+           via Serial, TCP or BLE. Designed for headless Raspberry Pi.
+          CTRL
+          dpkg-deb --build deb meshcore-cli_${VERSION}_arm64.deb
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-arm64
+          path: |
+            meshcore-cli_*_arm64.deb
+            target/aarch64-unknown-linux-gnu/release/meshcore-cli
+            target/release/meshcore-cli
+
   release:
     name: Create Release
-    needs: build
+    needs: [build, build-cli-arm64]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -106,8 +166,18 @@ jobs:
         with:
           path: artifacts
 
+      - name: Rename CLI binaries for clarity
+        run: |
+          cd artifacts/cli-arm64
+          if [ -f "target/aarch64-unknown-linux-gnu/release/meshcore-cli" ]; then
+            cp target/aarch64-unknown-linux-gnu/release/meshcore-cli meshcore-cli_arm64
+          fi
+          if [ -f "target/release/meshcore-cli" ]; then
+            cp target/release/meshcore-cli meshcore-cli_x86_64
+          fi
+
       - name: Display artifacts
-        run: find artifacts -type f | head -20
+        run: find artifacts -type f | head -30
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -117,6 +187,8 @@ jobs:
             artifacts/**/*.AppImage
             artifacts/**/*.exe
             artifacts/**/*.dmg
+            artifacts/cli-arm64/meshcore-cli_arm64
+            artifacts/cli-arm64/meshcore-cli_x86_64
           generate_release_notes: true
           draft: false
           prerelease: false

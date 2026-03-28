@@ -7,6 +7,7 @@ members = [
     "crates/meshcore-storage",
     "crates/meshcore-service",
     "crates/meshcore-app",
+    "crates/meshcore-cli",
 ]
 
 [workspace.package]
@@ -70,3 +71,9 @@ tokio-serial = "5"
 
 # Compression
 smaz = "0.1"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+rustyline = "15"
+colored = "3"
+dirs = "6"

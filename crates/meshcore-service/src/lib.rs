@@ -10,6 +10,7 @@ pub mod device;
 pub mod events;
 pub mod los;
 pub mod messaging;
+pub mod repeater;
 pub mod state;
 
 pub use events::AppEvent;

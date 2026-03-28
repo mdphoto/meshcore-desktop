@@ -1,0 +1,27 @@
+[package]
+name = "meshcore-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "CLI pour dispositifs MeshCore — usage headless (Raspberry Pi, serveur SSH)"
+
+[[bin]]
+name = "meshcore-cli"
+path = "src/main.rs"
+
+[dependencies]
+meshcore-service = { path = "../meshcore-service" }
+meshcore-transport = { path = "../meshcore-transport" }
+meshcore-storage = { path = "../meshcore-storage" }
+meshcore-protocol = { path = "../meshcore-protocol" }
+tokio = { workspace = true }
+clap = { workspace = true }
+rustyline = { workspace = true }
+colored = { workspace = true }
+dirs = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
