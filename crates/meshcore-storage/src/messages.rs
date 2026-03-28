@@ -43,13 +43,19 @@ pub fn get_direct_messages(
         "SELECT id, direction, sender_pubkey, sender_name, recipient_pubkey, channel_idx,
                 text, timestamp, status, snr, rssi, path_len, attempt, reply_to, reaction
          FROM messages
-         WHERE (sender_pubkey = ?1 OR recipient_pubkey = ?1) AND channel_idx IS NULL
+         WHERE channel_idx IS NULL
+           AND (sender_pubkey LIKE ?1 OR recipient_pubkey LIKE ?1
+                OR ?2 LIKE sender_pubkey || '%' OR ?2 LIKE recipient_pubkey || '%')
          ORDER BY timestamp DESC
-         LIMIT ?2 OFFSET ?3",
+         LIMIT ?3 OFFSET ?4",
     )?;
 
+    let pattern = format!("{}%", contact_pubkey);
     let messages = stmt
-        .query_map(params![contact_pubkey, limit, offset], map_message_row)?
+        .query_map(
+            params![pattern, contact_pubkey, limit, offset],
+            map_message_row,
+        )?
         .collect::<Result<Vec<_>, _>>()?;
 
     Ok(messages)
@@ -79,25 +85,48 @@ pub fn get_channel_messages(
 }
 
 /// Retourne les pubkeys des contacts avec qui on a des messages DM
+/// Fusionne les prefix courts (12 hex) avec les clés complètes (64 hex)
 pub fn get_dm_contact_pubkeys(conn: &Connection) -> Result<Vec<String>, StorageError> {
     let mut stmt = conn.prepare(
         "SELECT DISTINCT COALESCE(sender_pubkey, recipient_pubkey) as pk
          FROM messages
          WHERE channel_idx IS NULL AND pk IS NOT NULL
          ORDER BY (SELECT MAX(timestamp) FROM messages m2
-                   WHERE (m2.sender_pubkey = pk OR m2.recipient_pubkey = pk) AND m2.channel_idx IS NULL) DESC"
+                   WHERE (m2.sender_pubkey = pk OR m2.recipient_pubkey = pk) AND m2.channel_idx IS NULL) DESC",
     )?;
-    let keys = stmt
+    let raw_keys = stmt
         .query_map([], |row| row.get(0))?
         .collect::<Result<Vec<String>, _>>()?;
-    Ok(keys)
+
+    // Fusionner : si une clé courte (prefix) est le début d'une clé longue, garder la longue
+    let mut merged: Vec<String> = Vec::new();
+    for key in &raw_keys {
+        let dominated = merged.iter().any(|existing| {
+            existing.starts_with(key.as_str()) || key.starts_with(existing.as_str())
+        });
+        if !dominated {
+            merged.push(key.clone());
+        } else {
+            // Remplacer le prefix court par la clé longue si on en trouve une plus longue
+            for existing in merged.iter_mut() {
+                if key.starts_with(existing.as_str()) && key.len() > existing.len() {
+                    *existing = key.clone();
+                    break;
+                }
+            }
+        }
+    }
+    Ok(merged)
 }
 
-/// Supprime les messages d'une conversation
+/// Supprime les messages d'une conversation (matching par prefix ou clé complète)
 pub fn delete_conversation(conn: &Connection, contact_pubkey: &str) -> Result<u64, StorageError> {
+    let pattern = format!("{}%", contact_pubkey);
     let affected = conn.execute(
-        "DELETE FROM messages WHERE sender_pubkey = ?1 OR recipient_pubkey = ?1",
-        params![contact_pubkey],
+        "DELETE FROM messages WHERE channel_idx IS NULL
+         AND (sender_pubkey LIKE ?1 OR recipient_pubkey LIKE ?1
+              OR ?2 LIKE sender_pubkey || '%' OR ?2 LIKE recipient_pubkey || '%')",
+        params![pattern, contact_pubkey],
     )?;
     Ok(affected as u64)
 }
