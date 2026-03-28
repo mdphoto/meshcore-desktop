@@ -1,6 +1,6 @@
 {
   "productName": "MeshCore Desktop",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "identifier": "io.meshcore.desktop",
   "build": {
     "frontendDist": "../../frontend/dist",
