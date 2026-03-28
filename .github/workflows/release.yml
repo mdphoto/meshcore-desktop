@@ -101,8 +101,11 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: Install cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
+      - name: Install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libdbus-1-dev pkg-config
+          cargo install cross --git https://github.com/cross-rs/cross
 
       - name: Build meshcore-cli for ARM64 via cross (Docker)
         run: cross build --release --target aarch64-unknown-linux-gnu --package meshcore-cli
