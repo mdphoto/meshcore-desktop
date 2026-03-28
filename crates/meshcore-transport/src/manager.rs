@@ -65,9 +65,13 @@ impl ConnectionManager {
             ConnectionTarget::Serial { port, baud_rate } => MeshCore::serial(port, *baud_rate)
                 .await
                 .map_err(|e| TransportError::Serial(e.to_string()))?,
-            ConnectionTarget::Tcp { host, port } => MeshCore::tcp(host, *port)
-                .await
-                .map_err(|e| TransportError::Tcp(e.to_string()))?,
+            ConnectionTarget::Tcp { host, port } => tokio::time::timeout(
+                std::time::Duration::from_secs(10),
+                MeshCore::tcp(host, *port),
+            )
+            .await
+            .map_err(|_| TransportError::Timeout(10))?
+            .map_err(|e| TransportError::Tcp(e.to_string()))?,
             ConnectionTarget::Ble { name_or_addr } => MeshCore::ble_connect(name_or_addr)
                 .await
                 .map_err(|e| TransportError::Ble(e.to_string()))?,

@@ -10,6 +10,7 @@ use tracing::info;
 /// Connecte au dispositif MeshCore, fait le handshake minimal (appstart + set_time)
 /// et retourne rapidement. Le chargement des contacts est à faire séparément via sync_contacts.
 pub async fn connect(state: &AppState, target: ConnectionTarget) -> Result<(), String> {
+    let is_ble = matches!(&target, ConnectionTarget::Ble { .. });
     let default_name = match &target {
         ConnectionTarget::Ble { name_or_addr } => name_or_addr.clone(),
         ConnectionTarget::Serial { port, .. } => port.clone(),
@@ -24,9 +25,11 @@ pub async fn connect(state: &AppState, target: ConnectionTarget) -> Result<(), S
         .ok_or("Connexion établie mais pas de MeshCore")?;
     let cmds = mc.commands();
 
-    // Stabilisation BLE
-    info!("Attente stabilisation BLE (2s)...");
-    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    // Stabilisation BLE uniquement (TCP et Serial n'en ont pas besoin)
+    if is_ble {
+        info!("Attente stabilisation BLE (2s)...");
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    }
 
     // Augmenter le timeout par défaut (5s trop court pour BLE multi-hop)
     mc.set_default_timeout(std::time::Duration::from_secs(30))
