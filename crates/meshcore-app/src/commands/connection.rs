@@ -110,21 +110,19 @@ pub async fn is_connected(state: State<'_, AppState>) -> Result<bool, String> {
     Ok(meshcore_service::connection::is_connected(&state).await)
 }
 
-/// Appaire un périphérique BLE via BlueZ (Linux) avec PIN
-/// Utilise un script bash avec délais pour que bluetoothctl ait le temps de
-/// demander le passkey avant qu'on l'envoie
+/// Appaire un périphérique BLE avec PIN
+///
+/// Sur Windows/macOS : l'OS gère l'appairage automatiquement via btleplug.
+/// Sur Linux : utilise bluetoothctl en fallback.
 #[tauri::command]
 pub async fn pair_ble_device(address: String, pin: String) -> Result<String, String> {
-    use tokio::process::Command;
-
     tracing::info!("Pairing BLE device {} avec PIN {}...", address, pin);
 
-    // Script avec délais :
-    // 1. Lancer un scan pour que BlueZ découvre le device
-    // 2. Attendre qu'il apparaisse
-    // 3. Pair + PIN + trust
-    let script = format!(
-        r#"
+    #[cfg(target_os = "linux")]
+    {
+        use tokio::process::Command;
+        let script = format!(
+            r#"
 {{
   echo "agent off"
   sleep 0.3
@@ -145,54 +143,76 @@ pub async fn pair_ble_device(address: String, pin: String) -> Result<String, Str
   echo "quit"
 }} | bluetoothctl 2>&1
 "#,
-        addr = address,
-        pin = pin
-    );
+            addr = address,
+            pin = pin
+        );
 
-    let output = Command::new("bash")
-        .arg("-c")
-        .arg(&script)
-        .output()
-        .await
-        .map_err(|e| format!("Impossible de lancer bluetoothctl : {}", e))?;
+        let output = Command::new("bash")
+            .arg("-c")
+            .arg(&script)
+            .output()
+            .await
+            .map_err(|e| format!("Impossible de lancer bluetoothctl : {}", e))?;
 
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    // Nettoyer les codes ANSI pour les logs
-    let clean = stdout
-        .replace("\x1b[0m", "")
-        .replace("\x1b[0;94m", "")
-        .replace("\x1b[0;92m", "")
-        .replace("\x1b[1;39m", "")
-        .replace("\x1b[K;9", "");
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let clean = stdout
+            .replace("\x1b[0m", "")
+            .replace("\x1b[0;94m", "")
+            .replace("\x1b[0;92m", "")
+            .replace("\x1b[1;39m", "")
+            .replace("\x1b[K;9", "");
 
-    tracing::info!("bluetoothctl output:\n{}", clean);
+        tracing::info!("bluetoothctl output:\n{}", clean);
 
-    if clean.contains("Pairing successful") {
-        Ok(format!("Appairage réussi pour {}", address))
-    } else if clean.contains("Already Paired") || clean.contains("already paired") {
-        Ok(format!("Déjà appairé : {}", address))
-    } else if clean.contains("Failed to pair") {
-        Err("Échec de l'appairage — vérifiez le PIN".to_string())
-    } else if clean.contains("trust succeeded") {
-        Ok(format!("Trust OK pour {}", address))
-    } else {
-        Ok("Appairage tenté — vérifiez les logs backend".to_string())
+        if clean.contains("Pairing successful") {
+            Ok(format!("Appairage réussi pour {}", address))
+        } else if clean.contains("Already Paired") || clean.contains("already paired") {
+            Ok(format!("Déjà appairé : {}", address))
+        } else if clean.contains("Failed to pair") {
+            Err("Échec de l'appairage — vérifiez le PIN".to_string())
+        } else if clean.contains("trust succeeded") {
+            Ok(format!("Trust OK pour {}", address))
+        } else {
+            Ok("Appairage tenté — vérifiez les logs backend".to_string())
+        }
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        // Sur Windows/macOS, l'appairage BLE est géré par l'OS.
+        // btleplug déclenche l'appairage automatiquement lors de la connexion.
+        // Le PIN est demandé par une popup système.
+        let _ = pin; // Le PIN est géré par l'OS
+        Ok(format!(
+            "Sur cette plateforme, l'appairage est géré par le système. \
+             Connectez-vous directement à {} — l'OS demandera le PIN si nécessaire.",
+            address
+        ))
     }
 }
 
 /// Vérifie si un device BLE est appairé
 #[tauri::command]
 pub async fn is_ble_paired(address: String) -> Result<bool, String> {
-    use tokio::process::Command;
+    #[cfg(target_os = "linux")]
+    {
+        use tokio::process::Command;
+        let output = Command::new("bluetoothctl")
+            .args(["info", &address])
+            .output()
+            .await
+            .map_err(|e| format!("bluetoothctl error: {}", e))?;
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        Ok(stdout.contains("Paired: yes"))
+    }
 
-    let output = Command::new("bluetoothctl")
-        .args(["info", &address])
-        .output()
-        .await
-        .map_err(|e| format!("bluetoothctl error: {}", e))?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(stdout.contains("Paired: yes"))
+    #[cfg(not(target_os = "linux"))]
+    {
+        // Sur Windows/macOS, pas de moyen simple de vérifier via btleplug.
+        // On retourne true pour ne pas bloquer le flux de connexion.
+        let _ = address;
+        Ok(true)
+    }
 }
 
 /// Déconnecte une connexion spécifique par son ID
