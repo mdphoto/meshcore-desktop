@@ -5,6 +5,26 @@ Communiquez hors réseau via BLE, USB ou TCP avec vos dispositifs MeshCore.
 
 **[English version below](#english)**
 
+> **⚠️ Version beta — Testeurs bienvenus !**
+>
+> MeshCore Desktop est fonctionnel mais encore jeune. Nous avons besoin de retours sur toutes les plateformes.
+> Si vous rencontrez un problème, ouvrez une [issue](https://github.com/mdphoto/meshcore-desktop/issues).
+>
+> | Plateforme | Connexion BLE | Connexion USB/Série | Connexion TCP/WiFi | GUI | CLI |
+> |---|---|---|---|---|---|
+> | Linux x86_64 | ✅ Testé | ❓ À tester | ❓ À tester | ✅ Testé | ✅ Testé |
+> | Windows x64 | ❓ À tester | ❓ À tester | 🔧 Fix v0.2.1 — à valider | ❓ À tester | ❓ À tester |
+> | macOS Intel | ❓ À tester | ❓ À tester | ❓ À tester | ❓ À tester | ❓ À tester |
+> | macOS Apple Silicon | ❓ À tester | ❓ À tester | ❓ À tester | ❓ À tester | ❓ À tester |
+> | Raspberry Pi (ARM64) | ❓ À tester | ❓ À tester | ❓ À tester | — | ❓ À tester |
+>
+> **Priorités de test :**
+> 1. 🔧 **Windows TCP** : le port par défaut est maintenant 4403 — vérifier la connexion WiFi companion
+> 2. ❓ **Windows BLE** : appairage et communication avec un device MeshCore
+> 3. ❓ **macOS** : la GUI et la CLI se lancent-elles correctement ?
+> 4. ❓ **Raspberry Pi** : la CLI fonctionne-t-elle en SSH avec un device série ?
+> 5. ❓ **Linux USB/Série et TCP** : connexion série et WiFi companion
+
 ---
 
 ## Fonctionnalités
@@ -209,6 +229,26 @@ Michel Dessenne — [IELOW SAS](https://ielow.fr)
 
 Cross-platform desktop client for [MeshCore](https://meshcore.co.uk/) LoRa mesh networks.
 Communicate off-grid via BLE, USB or TCP with your MeshCore devices.
+
+> **⚠️ Beta version — Testers welcome!**
+>
+> MeshCore Desktop is functional but still young. We need feedback on all platforms.
+> If you find an issue, please open an [issue](https://github.com/mdphoto/meshcore-desktop/issues).
+>
+> | Platform | BLE | USB/Serial | TCP/WiFi | GUI | CLI |
+> |---|---|---|---|---|---|
+> | Linux x86_64 | ✅ Tested | ❓ Untested | ❓ Untested | ✅ Tested | ✅ Tested |
+> | Windows x64 | ❓ Untested | ❓ Untested | 🔧 Fix v0.2.1 — needs validation | ❓ Untested | ❓ Untested |
+> | macOS Intel | ❓ Untested | ❓ Untested | ❓ Untested | ❓ Untested | ❓ Untested |
+> | macOS Apple Silicon | ❓ Untested | ❓ Untested | ❓ Untested | ❓ Untested | ❓ Untested |
+> | Raspberry Pi (ARM64) | ❓ Untested | ❓ Untested | ❓ Untested | — | ❓ Untested |
+>
+> **Testing priorities:**
+> 1. 🔧 **Windows TCP**: default port is now 4403 — verify WiFi companion connection
+> 2. ❓ **Windows BLE**: pairing and communication with a MeshCore device
+> 3. ❓ **macOS**: do the GUI and CLI launch correctly?
+> 4. ❓ **Raspberry Pi**: does the CLI work via SSH with a serial device?
+> 5. ❓ **Linux USB/Serial and TCP**: serial and WiFi companion connections
 
 ## Features
 
