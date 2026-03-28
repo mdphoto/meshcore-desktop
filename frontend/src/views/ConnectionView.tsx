@@ -18,7 +18,7 @@ export function ConnectionView() {
   const [serialPort, setSerialPort] = useState('/dev/ttyUSB0')
   const [baudRate, setBaudRate] = useState(115200)
   const [tcpHost, setTcpHost] = useState('127.0.0.1')
-  const [tcpPort, setTcpPort] = useState(5000)
+  const [tcpPort, setTcpPort] = useState(4403)
   const [bleName, setBleName] = useState('')
   const [connecting, setConnecting] = useState(false)
   const [serialPorts, setSerialPorts] = useState<string[]>([])
@@ -128,8 +128,10 @@ export function ConnectionView() {
           await tauri.connectSerial(comp.address, 115200)
           break
         case 'tcp': {
-          const [host, port] = comp.address.split(':')
-          await tauri.connectTcp(host, Number(port))
+          const lastColon = comp.address.lastIndexOf(':')
+          const host = lastColon > 0 ? comp.address.slice(0, lastColon) : comp.address
+          const port = lastColon > 0 ? Number(comp.address.slice(lastColon + 1)) : 4403
+          await tauri.connectTcp(host, isNaN(port) ? 4403 : port)
           break
         }
         case 'ble':
