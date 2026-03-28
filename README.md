@@ -65,6 +65,10 @@ Communiquez hors réseau via BLE, USB ou TCP avec vos dispositifs MeshCore.
 | .deb (arm64) | [meshcore-cli_0.2.0_arm64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_0.2.0_arm64.deb) |
 | Binaire brut | [meshcore-cli_linux_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_linux_arm64) |
 
+> **Pourquoi pas de GUI sur Raspberry Pi ?**
+> L'interface graphique (GUI) utilise Tauri qui nécessite webkit2gtk, une bibliothèque impossible à cross-compiler pour ARM64. La CLI offre toutes les fonctionnalités (connexion, messagerie, contacts, administration repeater) et est conçue pour un usage en SSH.
+> Si vous souhaitez la GUI sur un RPi avec écran, vous pouvez [compiler depuis les sources](#compilation-depuis-les-sources) directement sur le Raspberry Pi (nécessite ~2 Go de RAM et ~30 min de compilation).
+
 ## Installation
 
 ### GUI (Linux)
@@ -283,6 +287,10 @@ Communicate off-grid via BLE, USB or TCP with your MeshCore devices.
 |---|---|
 | .deb (arm64) | [meshcore-cli_0.2.0_arm64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_0.2.0_arm64.deb) |
 | Raw binary | [meshcore-cli_linux_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_linux_arm64) |
+
+> **Why no GUI on Raspberry Pi?**
+> The graphical interface (GUI) uses Tauri which requires webkit2gtk, a library that cannot be cross-compiled for ARM64. The CLI provides all features (connection, messaging, contacts, repeater admin) and is designed for SSH usage.
+> If you want the GUI on a RPi with a screen, you can [build from source](#building-from-source) directly on the Raspberry Pi (requires ~2 GB RAM and ~30 min build time).
 
 ## Installation
 
