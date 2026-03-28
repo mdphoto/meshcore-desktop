@@ -15,6 +15,7 @@ Communiquez hors réseau via BLE, USB ou TCP avec vos dispositifs MeshCore.
 - **Analyse ligne de vue** : profil d'élévation SRTM avec zone de Fresnel
 - **Multi-connexion** : BLE, USB série et TCP simultanément
 - **Room Servers** : login, chat de groupe, administration
+- **CLI headless** : REPL interactif pour Raspberry Pi / serveur SSH
 - **Export GPX** : waypoints de tous les nœuds du réseau
 - **12 langues** : FR, EN, ES, DE, IT, PT, NL, PL, JA, ZH, KO, RU
 - **Notifications OS** : alertes natives pour les messages entrants
@@ -25,36 +26,110 @@ Communiquez hors réseau via BLE, USB ou TCP avec vos dispositifs MeshCore.
 
 *Bientôt disponibles*
 
-## Téléchargement v0.1.0
+## Téléchargement v0.2.0
 
-| Plateforme | Téléchargement |
+### Application GUI (desktop avec interface graphique)
+
+| Plateforme | GUI | CLI |
+|---|---|---|
+| Linux (Debian/Ubuntu) | [MeshCore.Desktop_0.2.0_amd64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_amd64.deb) | [meshcore-cli_linux_x86_64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_linux_x86_64) |
+| Linux (AppImage) | [MeshCore.Desktop_0.2.0_amd64.AppImage](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_amd64.AppImage) | — |
+| Windows | [MeshCore.Desktop_0.2.0_x64-setup.exe](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_x64-setup.exe) | [meshcore-cli_windows_x64.exe](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_windows_x64.exe) |
+| macOS (Apple Silicon) | [MeshCore.Desktop_0.2.0_aarch64.dmg](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_aarch64.dmg) | [meshcore-cli_macos_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_macos_arm64) |
+| macOS (Intel) | [MeshCore.Desktop_0.2.0_x64.dmg](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_x64.dmg) | [meshcore-cli_macos_x64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_macos_x64) |
+
+### Raspberry Pi (ARM64 — CLI uniquement)
+
+| Format | Téléchargement |
 |---|---|
-| Linux (Debian/Ubuntu) | [MeshCore.Desktop_0.1.0_amd64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_amd64.deb) |
-| Linux (AppImage) | [MeshCore.Desktop_0.1.0_amd64.AppImage](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_amd64.AppImage) |
-| Windows | [MeshCore.Desktop_0.1.0_x64-setup.exe](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_x64-setup.exe) |
-| macOS (Apple Silicon) | [MeshCore.Desktop_0.1.0_aarch64.dmg](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_aarch64.dmg) |
-| macOS (Intel) | [MeshCore.Desktop_0.1.0_x64.dmg](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_x64.dmg) |
+| .deb (arm64) | [meshcore-cli_0.2.0_arm64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_0.2.0_arm64.deb) |
+| Binaire brut | [meshcore-cli_linux_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_linux_arm64) |
 
 ## Installation
 
-### Linux
+### GUI (Linux)
 
 ```bash
 # Debian/Ubuntu
-sudo dpkg -i MeshCore.Desktop_0.1.0_amd64.deb
+sudo dpkg -i MeshCore.Desktop_0.2.0_amd64.deb
 
 # Ou AppImage (pas d'installation requise)
-chmod +x MeshCore.Desktop_0.1.0_amd64.AppImage
-./MeshCore.Desktop_0.1.0_amd64.AppImage
+chmod +x MeshCore.Desktop_0.2.0_amd64.AppImage
+./MeshCore.Desktop_0.2.0_amd64.AppImage
 ```
 
-### Windows
+### GUI (Windows)
 
-Lancez `MeshCore.Desktop_0.1.0_x64-setup.exe` et suivez l'installeur.
+Lancez `MeshCore.Desktop_0.2.0_x64-setup.exe` et suivez l'installeur.
 
-### macOS
+### GUI (macOS)
 
 Ouvrez le `.dmg` et glissez MeshCore Desktop dans Applications.
+
+### CLI (toutes plateformes)
+
+```bash
+# Linux / macOS — rendre exécutable
+chmod +x meshcore-cli_linux_x86_64
+./meshcore-cli_linux_x86_64 --help
+
+# Raspberry Pi
+sudo dpkg -i meshcore-cli_0.2.0_arm64.deb
+meshcore-cli --help
+```
+
+## Utilisation de la CLI
+
+### Mode interactif (REPL)
+
+Idéal pour un Raspberry Pi accessible en SSH :
+
+```bash
+meshcore-cli --port /dev/ttyUSB0
+```
+
+```
+meshcore [/dev/ttyUSB0] > contacts
+Nom                  Clé            Type       Hops   Vu
+Michel               abcdef123456   Client     1      2026-03-28
+Repeater-01          fedcba654321   Repeater   0      2026-03-28
+2 contacts
+
+meshcore [/dev/ttyUSB0] > send Michel Salut depuis le toit !
+Envoyé (id: a1b2c3d4)
+
+meshcore [/dev/ttyUSB0] > repeater login fedcba654321 monmdp
+Login envoyé
+
+meshcore [/dev/ttyUSB0] > repeater cli fedcba654321 ver
+MeshCore v1.2.3
+
+meshcore [/dev/ttyUSB0] > quit
+```
+
+### Mode one-shot (scripts)
+
+```bash
+# Lister les contacts
+meshcore-cli --port /dev/ttyUSB0 contacts list
+
+# Envoyer un message
+meshcore-cli --tcp 192.168.1.50:4403 send Michel "Hello mesh !"
+
+# Sortie JSON pour scripting
+meshcore-cli --port /dev/ttyUSB0 --json device
+```
+
+### Options de connexion
+
+| Option | Exemple | Description |
+|---|---|---|
+| `--port` / `-p` | `--port /dev/ttyUSB0` | Connexion série USB |
+| `--baud` / `-b` | `--baud 115200` | Baud rate (défaut: 115200) |
+| `--tcp` | `--tcp 192.168.1.50:4403` | Connexion TCP |
+| `--ble` | `--ble MeshCore-AB12` | Connexion Bluetooth LE |
+| `--json` | | Sortie JSON |
+| `--verbose` / `-v` | | Logs détaillés |
 
 ## Compilation depuis les sources
 
@@ -70,23 +145,20 @@ Ouvrez le `.dmg` et glissez MeshCore Desktop dans Applications.
 sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev pkg-config
 ```
 
-### Build
+### Build GUI
 
 ```bash
-# Cloner le projet
 git clone https://github.com/mdphoto/meshcore-desktop.git
 cd meshcore-desktop
-
-# Installer les dépendances frontend
-cd frontend && npm install && cd ..
-
-# Build en mode développement
-cd frontend && npm run dev &
-cargo tauri dev
-
-# Build release (produit .deb, .rpm, binaire)
-cd frontend && npm run build && cd ..
+cd frontend && npm install && npm run build && cd ..
 cargo tauri build
+```
+
+### Build CLI seule
+
+```bash
+cargo build --release -p meshcore-cli
+./target/release/meshcore-cli --help
 ```
 
 ### Tests
@@ -109,12 +181,9 @@ meshcore-desktop/
 │   ├── meshcore-transport/   # BLE, Serial, TCP, reconnexion auto
 │   ├── meshcore-storage/     # SQLite (contacts, messages, canaux)
 │   ├── meshcore-service/     # Logique métier, état, événements, LOS
-│   └── meshcore-app/         # Application Tauri, 50 commandes IPC
+│   ├── meshcore-app/         # Application Tauri GUI, 50 commandes IPC
+│   └── meshcore-cli/         # CLI headless (REPL + one-shot)
 └── frontend/                 # React 19, TypeScript, Tailwind CSS
-    └── src/
-        ├── views/            # 7 vues (Connection, Contacts, Chat, Map, Device, Repeater, Settings)
-        ├── components/       # ElevationProfile, EmojiPicker, QrCode, etc.
-        └── hooks/            # useEvents (temps réel), useTauri (IPC)
 ```
 
 Basé sur la bibliothèque [meshcore-rs](https://crates.io/crates/meshcore-rs) pour le protocole MeshCore.
@@ -149,42 +218,97 @@ Communicate off-grid via BLE, USB or TCP with your MeshCore devices.
 - **Line-of-sight analysis**: SRTM elevation profile with Fresnel zone
 - **Multi-connection**: BLE, USB serial and TCP simultaneously
 - **Room Servers**: login, group chat, administration
+- **Headless CLI**: interactive REPL for Raspberry Pi / SSH server
 - **GPX export**: waypoints for all mesh nodes
 - **12 languages**: FR, EN, ES, DE, IT, PT, NL, PL, JA, ZH, KO, RU
 - **OS notifications**: native alerts for incoming messages
 - **Deep links**: `meshcore://` scheme to open contacts and channels
 - **Dark/light theme**
 
-## Download v0.1.0
+## Download v0.2.0
 
-| Platform | Download |
+### GUI Application (desktop with graphical interface)
+
+| Platform | GUI | CLI |
+|---|---|---|
+| Linux (Debian/Ubuntu) | [.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_amd64.deb) | [meshcore-cli_linux_x86_64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_linux_x86_64) |
+| Linux (AppImage) | [.AppImage](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_amd64.AppImage) | — |
+| Windows | [.exe](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_x64-setup.exe) | [meshcore-cli_windows_x64.exe](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_windows_x64.exe) |
+| macOS (Apple Silicon) | [.dmg](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_aarch64.dmg) | [meshcore-cli_macos_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_macos_arm64) |
+| macOS (Intel) | [.dmg](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_x64.dmg) | [meshcore-cli_macos_x64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_macos_x64) |
+
+### Raspberry Pi (ARM64 — CLI only)
+
+| Format | Download |
 |---|---|
-| Linux (Debian/Ubuntu) | [MeshCore.Desktop_0.1.0_amd64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_amd64.deb) |
-| Linux (AppImage) | [MeshCore.Desktop_0.1.0_amd64.AppImage](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_amd64.AppImage) |
-| Windows | [MeshCore.Desktop_0.1.0_x64-setup.exe](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_x64-setup.exe) |
-| macOS (Apple Silicon) | [MeshCore.Desktop_0.1.0_aarch64.dmg](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_aarch64.dmg) |
-| macOS (Intel) | [MeshCore.Desktop_0.1.0_x64.dmg](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.1.0/MeshCore.Desktop_0.1.0_x64.dmg) |
+| .deb (arm64) | [meshcore-cli_0.2.0_arm64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_0.2.0_arm64.deb) |
+| Raw binary | [meshcore-cli_linux_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_linux_arm64) |
 
 ## Installation
 
-### Linux
+### GUI (Linux)
 
 ```bash
-# Debian/Ubuntu
-sudo dpkg -i MeshCore.Desktop_0.1.0_amd64.deb
-
-# Or AppImage (no installation required)
-chmod +x MeshCore.Desktop_0.1.0_amd64.AppImage
-./MeshCore.Desktop_0.1.0_amd64.AppImage
+sudo dpkg -i MeshCore.Desktop_0.2.0_amd64.deb
+# Or AppImage:
+chmod +x MeshCore.Desktop_0.2.0_amd64.AppImage && ./MeshCore.Desktop_0.2.0_amd64.AppImage
 ```
 
-### Windows
+### GUI (Windows)
 
-Run `MeshCore.Desktop_0.1.0_x64-setup.exe` and follow the installer.
+Run `MeshCore.Desktop_0.2.0_x64-setup.exe` and follow the installer.
 
-### macOS
+### GUI (macOS)
 
 Open the `.dmg` and drag MeshCore Desktop to Applications.
+
+### CLI (all platforms)
+
+```bash
+chmod +x meshcore-cli_linux_x86_64
+./meshcore-cli_linux_x86_64 --help
+
+# Raspberry Pi
+sudo dpkg -i meshcore-cli_0.2.0_arm64.deb
+meshcore-cli --help
+```
+
+## CLI Usage
+
+### Interactive mode (REPL)
+
+Ideal for a Raspberry Pi accessible via SSH:
+
+```bash
+meshcore-cli --port /dev/ttyUSB0
+```
+
+```
+meshcore [/dev/ttyUSB0] > contacts
+meshcore [/dev/ttyUSB0] > send Michel Hello from the roof!
+meshcore [/dev/ttyUSB0] > repeater login fedcba654321 mypassword
+meshcore [/dev/ttyUSB0] > repeater cli fedcba654321 ver
+meshcore [/dev/ttyUSB0] > quit
+```
+
+### One-shot mode (scripting)
+
+```bash
+meshcore-cli --port /dev/ttyUSB0 contacts list
+meshcore-cli --tcp 192.168.1.50:4403 --json device
+meshcore-cli --port /dev/ttyUSB0 send Michel "Hello mesh!"
+```
+
+### Connection options
+
+| Option | Example | Description |
+|---|---|---|
+| `--port` / `-p` | `--port /dev/ttyUSB0` | Serial USB connection |
+| `--baud` / `-b` | `--baud 115200` | Baud rate (default: 115200) |
+| `--tcp` | `--tcp 192.168.1.50:4403` | TCP connection |
+| `--ble` | `--ble MeshCore-AB12` | Bluetooth LE connection |
+| `--json` | | JSON output |
+| `--verbose` / `-v` | | Detailed logs |
 
 ## Building from source
 
@@ -200,32 +324,27 @@ Open the `.dmg` and drag MeshCore Desktop to Applications.
 sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev pkg-config
 ```
 
-### Build
+### Build GUI
 
 ```bash
 git clone https://github.com/mdphoto/meshcore-desktop.git
 cd meshcore-desktop
-
-# Install frontend dependencies
-cd frontend && npm install && cd ..
-
-# Development mode
-cd frontend && npm run dev &
-cargo tauri dev
-
-# Release build (produces .deb, .rpm, binary)
-cd frontend && npm run build && cd ..
+cd frontend && npm install && npm run build && cd ..
 cargo tauri build
+```
+
+### Build CLI only
+
+```bash
+cargo build --release -p meshcore-cli
+./target/release/meshcore-cli --help
 ```
 
 ### Tests
 
 ```bash
-# Rust tests (21 tests)
-cargo test --workspace
-
-# Frontend tests (41 tests)
-cd frontend && npm test
+cargo test --workspace     # 21 Rust tests
+cd frontend && npm test    # 41 frontend tests
 ```
 
 ## Architecture
@@ -238,12 +357,9 @@ meshcore-desktop/
 │   ├── meshcore-transport/   # BLE, Serial, TCP, auto-reconnect
 │   ├── meshcore-storage/     # SQLite (contacts, messages, channels)
 │   ├── meshcore-service/     # Business logic, state, events, LOS
-│   └── meshcore-app/         # Tauri application, 50 IPC commands
+│   ├── meshcore-app/         # Tauri GUI application, 50 IPC commands
+│   └── meshcore-cli/         # Headless CLI (REPL + one-shot)
 └── frontend/                 # React 19, TypeScript, Tailwind CSS
-    └── src/
-        ├── views/            # 7 views (Connection, Contacts, Chat, Map, Device, Repeater, Settings)
-        ├── components/       # ElevationProfile, EmojiPicker, QrCode, etc.
-        └── hooks/            # useEvents (real-time), useTauri (IPC)
 ```
 
 Built on top of [meshcore-rs](https://crates.io/crates/meshcore-rs) for the MeshCore protocol.
