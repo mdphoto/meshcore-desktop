@@ -21,12 +21,8 @@ pub async fn scan_ble_devices(duration_secs: Option<u64>) -> Result<Vec<BleDevic
     use btleplug::api::{Central, Manager as _, Peripheral as _, ScanFilter};
     use btleplug::platform::Manager;
     use std::time::Duration;
-    use uuid::Uuid;
 
     let duration = Duration::from_secs(duration_secs.unwrap_or(5));
-
-    // UUID du service NUS utilisé par MeshCore
-    let meshcore_service_uuid = Uuid::from_u128(0x6e400001_b5a3_f393_e0a9_e50e24dcca9e);
 
     let manager = Manager::new()
         .await
@@ -40,11 +36,10 @@ pub async fn scan_ble_devices(duration_secs: Option<u64>) -> Result<Vec<BleDevic
         .next()
         .ok_or("Aucun adaptateur Bluetooth trouvé")?;
 
-    // Scanner avec le filtre service UUID MeshCore (comme meshcore-rs)
+    // Scanner SANS filtre UUID (le filtrage par service UUID ne fonctionne pas
+    // sur Windows WinRT). On filtre par nom après le scan.
     adapter
-        .start_scan(ScanFilter {
-            services: vec![meshcore_service_uuid],
-        })
+        .start_scan(ScanFilter::default())
         .await
         .map_err(|e| format!("Erreur scan : {}", e))?;
 
@@ -63,10 +58,10 @@ pub async fn scan_ble_devices(duration_secs: Option<u64>) -> Result<Vec<BleDevic
     for p in peripherals {
         if let Ok(Some(props)) = p.properties().await {
             let name = props.local_name.unwrap_or_default();
-            // L'adresse MAC au format attendu par meshcore-rs
-            let address = props.address.to_string();
-            let rssi = props.rssi;
-            if !name.is_empty() {
+            // Filtrer par nom : MeshCore-* ou Whisper-* (préfixes standard MeshCore)
+            if name.starts_with("MeshCore-") || name.starts_with("Whisper-") {
+                let address = props.address.to_string();
+                let rssi = props.rssi;
                 devices.push(BleDevice {
                     name,
                     address,
