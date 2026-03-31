@@ -36,12 +36,27 @@ pub async fn scan_ble_devices(duration_secs: Option<u64>) -> Result<Vec<BleDevic
         .next()
         .ok_or("Aucun adaptateur Bluetooth trouvé")?;
 
-    // Scanner SANS filtre UUID (le filtrage par service UUID ne fonctionne pas
-    // sur Windows WinRT). On filtre par nom après le scan.
-    adapter
-        .start_scan(ScanFilter::default())
-        .await
-        .map_err(|e| format!("Erreur scan : {}", e))?;
+    // Scanner avec filtre adaptatif :
+    // - Linux : filtre par service UUID (fonctionne avec BlueZ et optimise le scan)
+    // - Windows/macOS : ScanFilter::default() (le filtre UUID ne fonctionne pas sur WinRT)
+    #[cfg(target_os = "linux")]
+    {
+        use uuid::Uuid;
+        let meshcore_service_uuid = Uuid::from_u128(0x6e400001_b5a3_f393_e0a9_e50e24dcca9e);
+        adapter
+            .start_scan(ScanFilter {
+                services: vec![meshcore_service_uuid],
+            })
+            .await
+            .map_err(|e| format!("Erreur scan : {}", e))?;
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        adapter
+            .start_scan(ScanFilter::default())
+            .await
+            .map_err(|e| format!("Erreur scan : {}", e))?;
+    }
 
     tokio::time::sleep(duration).await;
     adapter
