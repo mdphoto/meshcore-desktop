@@ -66,7 +66,7 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-gray-200 px-4 py-3 text-xs text-gray-400 dark:border-gray-800 dark:text-gray-600">
-        MeshCore Desktop v0.1.0
+        MeshCore Desktop v0.2.3
       </div>
     </aside>
   )

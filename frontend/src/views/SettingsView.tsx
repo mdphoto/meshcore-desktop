@@ -86,7 +86,7 @@ export function SettingsView() {
 
         {/* Info */}
         <div className="rounded-xl border border-gray-800 bg-gray-900 p-5 text-center">
-          <p className="text-sm text-gray-400">MeshCore Desktop v0.1.0</p>
+          <p className="text-sm text-gray-400">MeshCore Desktop v0.2.3</p>
           <p className="mt-1 text-xs text-gray-600">Rust + Tauri 2 + React</p>
         </div>
       </div>
