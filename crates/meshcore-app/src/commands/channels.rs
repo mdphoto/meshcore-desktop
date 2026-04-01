@@ -47,6 +47,6 @@ pub fn upsert_channel(
 }
 
 #[tauri::command]
-pub fn delete_channel(state: State<'_, AppState>, channel_idx: u8) -> Result<(), String> {
-    meshcore_service::channels::delete_channel(&state, channel_idx)
+pub async fn delete_channel(state: State<'_, AppState>, channel_idx: u8) -> Result<(), String> {
+    meshcore_service::channels::delete_channel(&state, channel_idx).await
 }

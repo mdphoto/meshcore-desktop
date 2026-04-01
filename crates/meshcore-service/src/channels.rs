@@ -41,9 +41,25 @@ pub fn mark_as_read(state: &AppState, channel_idx: u8) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
-pub fn delete_channel(state: &AppState, channel_idx: u8) -> Result<(), String> {
+pub async fn delete_channel(state: &AppState, channel_idx: u8) -> Result<(), String> {
+    // 1. Supprimer de la base de données locale
     state
         .db
         .with_conn(|conn| store::delete_channel(conn, channel_idx).map(|_| ()))
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+
+    // 2. Effacer le canal sur le device (nom vide + PSK vide)
+    // Cela évite que le canal ne réapparaisse lors de la reconnexion
+    let conn = state.connection.read().await;
+    if let Some(mc) = conn.meshcore() {
+        let empty_psk = [0u8; 16];
+        let _ = mc
+            .commands()
+            .lock()
+            .await
+            .set_channel(channel_idx, "", &empty_psk)
+            .await;
+    }
+
+    Ok(())
 }
