@@ -17,6 +17,15 @@ edition = "2024"
 license = "MIT"
 authors = ["Michel Dessenne"]
 
+# Profile release optimisé pour distribution : binaires plus petits et plus rapides.
+# Coût : compilation ~1 min au lieu de 13 s. Seul le mode `--release` est affecté.
+[profile.release]
+strip = true          # retire les symboles de debug (~12 Mo → ~9 Mo)
+lto = "thin"          # link-time optimization (gain taille + perf)
+codegen-units = 1     # meilleures optims inter-modules
+opt-level = 3
+panic = "abort"       # plus de petit + pas de stack unwinding inutile
+
 [workspace.dependencies]
 # Async runtime
 tokio = { version = "1", features = ["full"] }
