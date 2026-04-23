@@ -4,11 +4,11 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
-description = "TUI ratatui pour dispositifs MeshCore LoRa"
+description = "TUI ratatui pour dispositifs MeshCore LoRa (library — embarquée dans le binaire meshcore)"
 
-[[bin]]
-name = "meshcore-tui"
-path = "src/main.rs"
+[lib]
+name = "meshcore_tui"
+path = "src/lib.rs"
 
 [dependencies]
 # Crates internes

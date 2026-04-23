@@ -76,6 +76,12 @@ pub struct AppUiState {
     pub channel_edit_field: u8,
 }
 
+impl Default for AppUiState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AppUiState {
     pub fn new() -> Self {
         Self {

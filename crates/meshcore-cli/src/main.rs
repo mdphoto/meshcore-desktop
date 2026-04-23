@@ -1,6 +1,10 @@
-//! MeshCore CLI — client en ligne de commande pour dispositifs MeshCore
+//! MeshCore — binaire unifié
 //!
-//! Usage headless sur Raspberry Pi, serveur SSH, ou scripting.
+//! - Sans sous-commande : lance la TUI ratatui (mode interactif par défaut)
+//! - Avec sous-commande : exécute une commande one-shot (scripting, headless)
+//! - `--repl` : ancien REPL rustyline (legacy)
+//!
+//! Usage headless sur Raspberry Pi, serveur SSH, scripting — tout en un.
 
 mod commands;
 mod display;
@@ -9,13 +13,14 @@ mod repl;
 use clap::Parser;
 use meshcore_service::AppState;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
 
 #[derive(Parser)]
 #[command(
-    name = "meshcore-cli",
+    name = "meshcore",
     version,
-    about = "CLI pour dispositifs MeshCore LoRa"
+    about = "MeshCore — TUI + CLI unifié pour dispositifs LoRa"
 )]
 struct Cli {
     /// Port série (ex: /dev/ttyUSB0)
@@ -38,7 +43,7 @@ struct Cli {
     #[arg(long)]
     data_dir: Option<PathBuf>,
 
-    /// Sortie JSON (pour scripting)
+    /// Sortie JSON (pour scripting, avec sous-commande)
     #[arg(long)]
     json: bool,
 
@@ -46,7 +51,11 @@ struct Cli {
     #[arg(short, long)]
     verbose: bool,
 
-    /// Commande one-shot (si absent, lance le REPL interactif)
+    /// Utilise l'ancien REPL rustyline au lieu de la TUI (sans sous-commande)
+    #[arg(long)]
+    repl: bool,
+
+    /// Commande one-shot (si absent : lance la TUI, ou le REPL avec --repl)
     #[command(subcommand)]
     command: Option<SubCommand>,
 }
@@ -95,26 +104,57 @@ enum ContactsAction {
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
+    let is_interactive = cli.command.is_none();
+    let use_tui = is_interactive && !cli.repl;
 
-    // Logging
+    // En mode TUI : logs redirigés vers fichier (pas de pollution écran)
+    // En mode REPL/one-shot : logs vers stderr
+    let data_dir = cli.data_dir.clone().unwrap_or_else(|| {
+        dirs::data_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join("meshcore")
+    });
     let filter = if cli.verbose {
         "info,meshcore=debug"
     } else {
         "warn"
     };
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(filter)),
-        )
-        .with_target(false)
-        .init();
 
-    // Répertoire de données
-    let data_dir = cli.data_dir.unwrap_or_else(|| {
-        dirs::data_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join("meshcore")
-    });
+    if use_tui {
+        if let Err(e) = std::fs::create_dir_all(&data_dir) {
+            eprintln!("Erreur création data_dir : {}", e);
+            std::process::exit(1);
+        }
+        let log_path = data_dir.join("tui.log");
+        match std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&log_path)
+        {
+            Ok(file) => {
+                tracing_subscriber::fmt()
+                    .with_env_filter(
+                        EnvFilter::try_from_default_env()
+                            .unwrap_or_else(|_| EnvFilter::new(filter)),
+                    )
+                    .with_writer(file)
+                    .with_ansi(false)
+                    .with_target(false)
+                    .init();
+            }
+            Err(e) => {
+                eprintln!("Erreur ouverture log TUI : {}", e);
+                std::process::exit(1);
+            }
+        }
+    } else {
+        tracing_subscriber::fmt()
+            .with_env_filter(
+                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(filter)),
+            )
+            .with_target(false)
+            .init();
+    }
 
     let state = match AppState::new(data_dir) {
         Ok(s) => s,
@@ -124,7 +164,8 @@ async fn main() {
         }
     };
 
-    // Auto-connexion si paramètres fournis
+    // Auto-connexion explicite si un target CLI est fourni
+    let has_cli_target = cli.port.is_some() || cli.tcp.is_some() || cli.ble.is_some();
     if let Some(ref port) = cli.port {
         let target = meshcore_transport::manager::ConnectionTarget::Serial {
             port: port.clone(),
@@ -161,7 +202,7 @@ async fn main() {
         }
     }
 
-    // Mode one-shot ou REPL
+    // Dispatch : TUI / REPL / one-shot
     match cli.command {
         Some(cmd) => {
             if let Err(e) = commands::execute_subcommand(&state, cmd, cli.json).await {
@@ -170,7 +211,18 @@ async fn main() {
             }
         }
         None => {
-            repl::run(&state, cli.json).await;
+            if cli.repl {
+                repl::run(&state, cli.json).await;
+            } else {
+                // Mode par défaut : TUI ratatui
+                let service = Arc::new(state);
+                let auto_reconnect = !has_cli_target;
+                if let Err(e) = meshcore_tui::run_tui(service, auto_reconnect).await {
+                    // Le terminal est déjà restauré par le Drop de Tui, on peut imprimer
+                    eprintln!("Erreur TUI : {}", e);
+                    std::process::exit(1);
+                }
+            }
         }
     }
 }
