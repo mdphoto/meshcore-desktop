@@ -9,7 +9,7 @@ Communiquez hors réseau via BLE, USB/série ou TCP avec vos dispositifs MeshCor
 
 ## 📢 Changement de cap à partir de v0.3.0 — TUI comme interface principale
 
-Depuis la version **v0.3.0**, le projet bascule sur une **TUI (Terminal User Interface)** construite avec [ratatui](https://ratatui.rs/), distribuée sous forme d'un **binaire unique `meshcore`** qui combine :
+Depuis la version **v0.3.0**, le projet bascule sur une **TUI (Terminal User Interface)** construite avec [ratatui](https://ratatui.rs/), distribuée sous forme d'un **binaire unique `meshcore-desktop`** qui combine :
 
 - Une **interface interactive complète** (la TUI, lancée par défaut)
 - Un **mode one-shot** pour le scripting (sous-commandes `contacts`, `send`, `channels`, `device`, `battery`)
@@ -36,7 +36,7 @@ Le code de la GUI Tauri (`crates/meshcore-app` + `frontend/`) **reste dans le re
 > MeshCore Desktop est fonctionnel mais encore jeune. J'ai besoin de retours sur toutes les plateformes.
 > Si vous rencontrez un problème, ouvrez une [issue](https://github.com/mdphoto/meshcore-desktop/issues).
 >
-> | Plateforme | Binaire `meshcore` (TUI + CLI) | BLE | USB/Série | TCP |
+> | Plateforme | Binaire `meshcore-desktop` (TUI + CLI) | BLE | USB/Série | TCP |
 > |---|---|---|---|---|
 > | Linux x86_64 | ✅ Testé | ✅ Testé | ❓ À tester | ❓ À tester |
 > | Linux ARM64 (Pi 4/5) | ❓ À tester | ❓ À tester | ❓ À tester | ❓ À tester |
@@ -64,15 +64,15 @@ Le code de la GUI Tauri (`crates/meshcore-app` + `frontend/`) **reste dans le re
 
 ## Téléchargement v0.3.0
 
-Un seul binaire `meshcore` par plateforme (TUI + CLI combinés).
+Un seul binaire `meshcore-desktop` par plateforme (TUI + CLI combinés).
 
 | Plateforme | Binaire | Package |
 |---|---|---|
-| Linux x86_64 | [meshcore_linux_x86_64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_linux_x86_64) | [meshcore_0.3.0_amd64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_0.3.0_amd64.deb) |
-| Linux ARM64 (Raspberry Pi 4/5) | [meshcore_linux_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_linux_arm64) | [meshcore_0.3.0_arm64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_0.3.0_arm64.deb) |
-| Windows x64 | [meshcore_windows_x64.exe](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_windows_x64.exe) | — |
-| macOS Intel | [meshcore_macos_x64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_macos_x64) | — |
-| macOS Apple Silicon | [meshcore_macos_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_macos_arm64) | — |
+| Linux x86_64 | [meshcore-desktop_linux_x86_64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore-desktop_linux_x86_64) | [meshcore-desktop_0.3.0_amd64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore-desktop_0.3.0_amd64.deb) |
+| Linux ARM64 (Raspberry Pi 4/5) | [meshcore-desktop_linux_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore-desktop_linux_arm64) | [meshcore-desktop_0.3.0_arm64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore-desktop_0.3.0_arm64.deb) |
+| Windows x64 | [meshcore-desktop_windows_x64.exe](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore-desktop_windows_x64.exe) | — |
+| macOS Intel | [meshcore-desktop_macos_x64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore-desktop_macos_x64) | — |
+| macOS Apple Silicon | [meshcore-desktop_macos_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore-desktop_macos_arm64) | — |
 
 > **Binaire ~7 Mo**, statique (sauf libc / libdbus sur Linux), zéro install requise.
 
@@ -83,29 +83,29 @@ Un seul binaire `meshcore` par plateforme (TUI + CLI combinés).
 ```bash
 # Debian/Ubuntu/Pi OS
 sudo apt install libdbus-1-3          # déjà présent sur la plupart des systèmes
-sudo dpkg -i meshcore_0.3.0_amd64.deb
-meshcore                               # lance la TUI
+sudo dpkg -i meshcore-desktop_0.3.0_amd64.deb
+meshcore-desktop                               # lance la TUI
 
 # Ou binaire brut
-chmod +x meshcore_linux_x86_64
-./meshcore_linux_x86_64
+chmod +x meshcore-desktop_linux_x86_64
+./meshcore-desktop_linux_x86_64
 ```
 
 ### Windows
 
-1. Télécharger `meshcore_windows_x64.exe`
+1. Télécharger `meshcore-desktop_windows_x64.exe`
 2. **Utiliser Windows Terminal** (pré-installé sur Windows 11, gratuit depuis le Microsoft Store sur Windows 10). Le vieux `cmd.exe` / conhost ne gère pas correctement les emojis et les bordures Unicode
 3. Double-cliquer ou lancer depuis PowerShell / Windows Terminal :
 
 ```powershell
-.\meshcore_windows_x64.exe
+.\meshcore-desktop_windows_x64.exe
 ```
 
 ### macOS
 
 ```bash
-chmod +x meshcore_macos_arm64   # ou meshcore_macos_x64 pour Intel
-./meshcore_macos_arm64
+chmod +x meshcore-desktop_macos_arm64   # ou meshcore-desktop_macos_x64 pour Intel
+./meshcore-desktop_macos_arm64
 ```
 
 > **Permission Bluetooth** : à la première connexion BLE, macOS demandera l'autorisation Bluetooth. Autoriser le terminal (Terminal.app ou iTerm2) dans *Réglages Système → Confidentialité & sécurité → Bluetooth*.
@@ -113,9 +113,9 @@ chmod +x meshcore_macos_arm64   # ou meshcore_macos_x64 pour Intel
 ### Raspberry Pi (ARM64)
 
 ```bash
-wget https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_0.3.0_arm64.deb
-sudo dpkg -i meshcore_0.3.0_arm64.deb
-meshcore
+wget https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore-desktop_0.3.0_arm64.deb
+sudo dpkg -i meshcore-desktop_0.3.0_arm64.deb
+meshcore-desktop
 ```
 
 ## Utilisation
@@ -123,10 +123,10 @@ meshcore
 ### Mode interactif (TUI)
 
 ```bash
-meshcore                               # lance la TUI avec auto-reconnect
-meshcore --ble MeshCore-AB12           # force une connexion BLE précise
-meshcore --port /dev/ttyUSB0           # force une connexion série
-meshcore --tcp 192.168.1.50:4403       # force une connexion TCP
+meshcore-desktop                               # lance la TUI avec auto-reconnect
+meshcore-desktop --ble MeshCore-AB12           # force une connexion BLE précise
+meshcore-desktop --port /dev/ttyUSB0           # force une connexion série
+meshcore-desktop --tcp 192.168.1.50:4403       # force une connexion TCP
 ```
 
 Raccourcis principaux (la touche `?` affiche l'aide complète dans la TUI) :
@@ -141,16 +141,16 @@ Raccourcis principaux (la touche `?` affiche l'aide complète dans la TUI) :
 ### Mode one-shot (scripting)
 
 ```bash
-meshcore --port /dev/ttyUSB0 contacts list
-meshcore --tcp 192.168.1.50:4403 send Michel "Hello mesh !"
-meshcore --port /dev/ttyUSB0 --json device
-meshcore --ble MeshCore-AB12 battery lipo
+meshcore-desktop --port /dev/ttyUSB0 contacts list
+meshcore-desktop --tcp 192.168.1.50:4403 send Michel "Hello mesh !"
+meshcore-desktop --port /dev/ttyUSB0 --json device
+meshcore-desktop --ble MeshCore-AB12 battery lipo
 ```
 
 ### Mode REPL legacy (rustyline)
 
 ```bash
-meshcore --repl                        # retrouve l'ancien comportement
+meshcore-desktop --repl                        # retrouve l'ancien comportement
 ```
 
 ### Options globales
@@ -173,13 +173,13 @@ meshcore --repl                        # retrouve l'ancien comportement
 - [Rust](https://rustup.rs/) stable
 - Linux : `sudo apt install libdbus-1-dev pkg-config`
 
-### Build binaire `meshcore` (TUI + CLI)
+### Build binaire `meshcore-desktop` (TUI + CLI)
 
 ```bash
 git clone https://github.com/mdphoto/meshcore-desktop.git
 cd meshcore-desktop
 cargo build --release -p meshcore-cli
-./target/release/meshcore
+./target/release/meshcore-desktop
 ```
 
 ### Cross-compilation (depuis Linux)
@@ -232,7 +232,7 @@ meshcore-desktop/
 │   ├── meshcore-storage/     # SQLite (contacts, messages, canaux, settings)
 │   ├── meshcore-service/     # Logique métier, état, événements
 │   ├── meshcore-tui/         # TUI ratatui (library, entrypoint run_tui)
-│   ├── meshcore-cli/         # Binaire unifié « meshcore » (TUI + CLI + REPL)
+│   ├── meshcore-cli/         # Binaire unifié « meshcore-desktop » (TUI + CLI + REPL)
 │   └── meshcore-app/         # GUI Tauri legacy (maintenance communautaire)
 └── frontend/                 # React 19, TS, Tailwind (GUI legacy)
 ```
@@ -269,7 +269,7 @@ Communicate off-grid via BLE, USB/serial or TCP with your MeshCore devices.
 
 ## 📢 Pivot in v0.3.0 — TUI as the main interface
 
-Starting from **v0.3.0**, the project pivots to a **TUI (Terminal User Interface)** built with [ratatui](https://ratatui.rs/), shipped as a **single binary `meshcore`** that combines:
+Starting from **v0.3.0**, the project pivots to a **TUI (Terminal User Interface)** built with [ratatui](https://ratatui.rs/), shipped as a **single binary `meshcore-desktop`** that combines:
 
 - A **full interactive interface** (the TUI, launched by default)
 - A **one-shot mode** for scripting (subcommands `contacts`, `send`, `channels`, `device`, `battery`)
@@ -305,15 +305,15 @@ The Tauri GUI code (`crates/meshcore-app` + `frontend/`) **stays in the repo** a
 
 ## Download v0.3.0
 
-One `meshcore` binary per platform (TUI + CLI combined).
+One `meshcore-desktop` binary per platform (TUI + CLI combined).
 
 | Platform | Binary | Package |
 |---|---|---|
-| Linux x86_64 | [meshcore_linux_x86_64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_linux_x86_64) | [meshcore_0.3.0_amd64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_0.3.0_amd64.deb) |
-| Linux ARM64 (Raspberry Pi 4/5) | [meshcore_linux_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_linux_arm64) | [meshcore_0.3.0_arm64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_0.3.0_arm64.deb) |
-| Windows x64 | [meshcore_windows_x64.exe](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_windows_x64.exe) | — |
-| macOS Intel | [meshcore_macos_x64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_macos_x64) | — |
-| macOS Apple Silicon | [meshcore_macos_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_macos_arm64) | — |
+| Linux x86_64 | [meshcore-desktop_linux_x86_64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore-desktop_linux_x86_64) | [meshcore-desktop_0.3.0_amd64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore-desktop_0.3.0_amd64.deb) |
+| Linux ARM64 (Raspberry Pi 4/5) | [meshcore-desktop_linux_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore-desktop_linux_arm64) | [meshcore-desktop_0.3.0_arm64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore-desktop_0.3.0_arm64.deb) |
+| Windows x64 | [meshcore-desktop_windows_x64.exe](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore-desktop_windows_x64.exe) | — |
+| macOS Intel | [meshcore-desktop_macos_x64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore-desktop_macos_x64) | — |
+| macOS Apple Silicon | [meshcore-desktop_macos_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore-desktop_macos_arm64) | — |
 
 > **~7 MB binary**, mostly static, zero install required.
 
@@ -323,25 +323,25 @@ One `meshcore` binary per platform (TUI + CLI combined).
 
 ```bash
 sudo apt install libdbus-1-3
-sudo dpkg -i meshcore_0.3.0_amd64.deb
-meshcore                               # launch the TUI
+sudo dpkg -i meshcore-desktop_0.3.0_amd64.deb
+meshcore-desktop                               # launch the TUI
 ```
 
 ### Windows
 
-1. Download `meshcore_windows_x64.exe`
+1. Download `meshcore-desktop_windows_x64.exe`
 2. **Use Windows Terminal** (preinstalled on Windows 11, free in Microsoft Store on Windows 10). Old `cmd.exe` / conhost does not render emojis and Unicode borders well
 3. Double-click or run from PowerShell / Windows Terminal:
 
 ```powershell
-.\meshcore_windows_x64.exe
+.\meshcore-desktop_windows_x64.exe
 ```
 
 ### macOS
 
 ```bash
-chmod +x meshcore_macos_arm64
-./meshcore_macos_arm64
+chmod +x meshcore-desktop_macos_arm64
+./meshcore-desktop_macos_arm64
 ```
 
 > **Bluetooth permission**: on first BLE connection, macOS will ask for Bluetooth permission. Authorize the terminal (Terminal.app or iTerm2) in *System Settings → Privacy & Security → Bluetooth*.
@@ -349,9 +349,9 @@ chmod +x meshcore_macos_arm64
 ### Raspberry Pi (ARM64)
 
 ```bash
-wget https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_0.3.0_arm64.deb
-sudo dpkg -i meshcore_0.3.0_arm64.deb
-meshcore
+wget https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore-desktop_0.3.0_arm64.deb
+sudo dpkg -i meshcore-desktop_0.3.0_arm64.deb
+meshcore-desktop
 ```
 
 ## Usage
@@ -359,10 +359,10 @@ meshcore
 ### Interactive mode (TUI)
 
 ```bash
-meshcore                               # launches the TUI with auto-reconnect
-meshcore --ble MeshCore-AB12
-meshcore --port /dev/ttyUSB0
-meshcore --tcp 192.168.1.50:4403
+meshcore-desktop                               # launches the TUI with auto-reconnect
+meshcore-desktop --ble MeshCore-AB12
+meshcore-desktop --port /dev/ttyUSB0
+meshcore-desktop --tcp 192.168.1.50:4403
 ```
 
 Main shortcuts (press `?` for full help in the TUI):
@@ -377,15 +377,15 @@ Main shortcuts (press `?` for full help in the TUI):
 ### One-shot mode (scripting)
 
 ```bash
-meshcore --port /dev/ttyUSB0 contacts list
-meshcore --tcp 192.168.1.50:4403 send Michel "Hello mesh!"
-meshcore --port /dev/ttyUSB0 --json device
+meshcore-desktop --port /dev/ttyUSB0 contacts list
+meshcore-desktop --tcp 192.168.1.50:4403 send Michel "Hello mesh!"
+meshcore-desktop --port /dev/ttyUSB0 --json device
 ```
 
 ### Legacy REPL mode
 
 ```bash
-meshcore --repl                        # old rustyline REPL
+meshcore-desktop --repl                        # old rustyline REPL
 ```
 
 ## Building from source
@@ -395,13 +395,13 @@ meshcore --repl                        # old rustyline REPL
 - [Rust](https://rustup.rs/) stable
 - Linux: `sudo apt install libdbus-1-dev pkg-config`
 
-### Build `meshcore` binary (TUI + CLI)
+### Build `meshcore-desktop` binary (TUI + CLI)
 
 ```bash
 git clone https://github.com/mdphoto/meshcore-desktop.git
 cd meshcore-desktop
 cargo build --release -p meshcore-cli
-./target/release/meshcore
+./target/release/meshcore-desktop
 ```
 
 ### Cross-compilation (from Linux)
@@ -438,7 +438,7 @@ meshcore-desktop/
 │   ├── meshcore-storage/     # SQLite (contacts, messages, channels, settings)
 │   ├── meshcore-service/     # Business logic, state, events
 │   ├── meshcore-tui/         # ratatui TUI (library, entrypoint run_tui)
-│   ├── meshcore-cli/         # Unified binary « meshcore » (TUI + CLI + REPL)
+│   ├── meshcore-cli/         # Unified binary « meshcore-desktop » (TUI + CLI + REPL)
 │   └── meshcore-app/         # Legacy Tauri GUI (community-maintained)
 └── frontend/                 # React 19, TS, Tailwind (legacy GUI)
 ```

@@ -7,7 +7,7 @@ authors.workspace = true
 description = "Binaire MeshCore unifié — TUI ratatui par défaut, sous-commandes one-shot, REPL legacy"
 
 [[bin]]
-name = "meshcore"
+name = "meshcore-desktop"
 path = "src/main.rs"
 
 [dependencies]

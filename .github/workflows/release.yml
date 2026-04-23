@@ -1,6 +1,6 @@
 name: Release
 
-# Workflow de release principal — build le binaire unifié `meshcore` (TUI + CLI)
+# Workflow de release principal — build le binaire unifié `meshcore-desktop` (TUI + CLI)
 # pour 5 cibles : Linux x86_64, Linux ARM64, Windows x64, macOS Intel, macOS ARM.
 #
 # Léger (~5 min/build) car sans Tauri/WebKit. Pour ressortir une GUI legacy, utiliser
@@ -25,19 +25,19 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             binary_suffix: ""
-            asset_name: meshcore_linux_x86_64
+            asset_name: meshcore-desktop_linux_x86_64
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             binary_suffix: ".exe"
-            asset_name: meshcore_windows_x64.exe
+            asset_name: meshcore-desktop_windows_x64.exe
           - target: x86_64-apple-darwin
             os: macos-latest
             binary_suffix: ""
-            asset_name: meshcore_macos_x64
+            asset_name: meshcore-desktop_macos_x64
           - target: aarch64-apple-darwin
             os: macos-latest
             binary_suffix: ""
-            asset_name: meshcore_macos_arm64
+            asset_name: meshcore-desktop_macos_arm64
 
     steps:
       - uses: actions/checkout@v4
@@ -60,13 +60,13 @@ jobs:
             target
           key: ${{ runner.os }}-${{ matrix.target }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build meshcore
+      - name: Build meshcore-desktop
         run: cargo build --release --target ${{ matrix.target }} --package meshcore-cli
 
       - name: Rename binary
         shell: bash
         run: |
-          SRC="target/${{ matrix.target }}/release/meshcore${{ matrix.binary_suffix }}"
+          SRC="target/${{ matrix.target }}/release/meshcore-desktop${{ matrix.binary_suffix }}"
           DEST="${{ matrix.asset_name }}"
           cp "${SRC}" "${DEST}"
 
@@ -75,22 +75,22 @@ jobs:
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           mkdir -p deb/DEBIAN deb/usr/bin
-          cp target/${{ matrix.target }}/release/meshcore deb/usr/bin/
-          chmod +x deb/usr/bin/meshcore
+          cp target/${{ matrix.target }}/release/meshcore-desktop deb/usr/bin/
+          chmod +x deb/usr/bin/meshcore-desktop
           cat > deb/DEBIAN/control <<CTRL
-          Package: meshcore
+          Package: meshcore-desktop
           Version: ${VERSION}
           Section: comm
           Priority: optional
           Architecture: amd64
           Depends: libc6, libdbus-1-3
           Maintainer: Michel Dessenne
-          Description: MeshCore — TUI + CLI unifié pour réseaux LoRa MeshCore
+          Description: MeshCore Desktop — TUI + CLI unifié pour réseaux LoRa MeshCore
            Terminal application (TUI ratatui) and command-line interface
            combined in a single binary. Supports BLE, Serial and TCP
            connections to MeshCore devices.
           CTRL
-          dpkg-deb --build deb meshcore_${VERSION}_amd64.deb
+          dpkg-deb --build deb meshcore-desktop_${VERSION}_amd64.deb
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -98,7 +98,7 @@ jobs:
           name: ${{ matrix.asset_name }}
           path: |
             ${{ matrix.asset_name }}
-            meshcore_*_amd64.deb
+            meshcore-desktop_*_amd64.deb
 
   build-linux-arm64:
     name: Build aarch64-unknown-linux-gnu (cross Docker)
@@ -118,40 +118,40 @@ jobs:
             ~/.cargo/git
           key: ubuntu-cross-arm64-cargo-release-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build meshcore ARM64 via cross
+      - name: Build meshcore-desktop ARM64 via cross
         run: cross build --release --target aarch64-unknown-linux-gnu --package meshcore-cli
 
       - name: Rename binary
-        run: cp target/aarch64-unknown-linux-gnu/release/meshcore meshcore_linux_arm64
+        run: cp target/aarch64-unknown-linux-gnu/release/meshcore-desktop meshcore-desktop_linux_arm64
 
       - name: Package .deb (Linux ARM64)
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           mkdir -p deb/DEBIAN deb/usr/bin
-          cp target/aarch64-unknown-linux-gnu/release/meshcore deb/usr/bin/
-          chmod +x deb/usr/bin/meshcore
+          cp target/aarch64-unknown-linux-gnu/release/meshcore-desktop deb/usr/bin/
+          chmod +x deb/usr/bin/meshcore-desktop
           cat > deb/DEBIAN/control <<CTRL
-          Package: meshcore
+          Package: meshcore-desktop
           Version: ${VERSION}
           Section: comm
           Priority: optional
           Architecture: arm64
           Depends: libc6, libdbus-1-3
           Maintainer: Michel Dessenne
-          Description: MeshCore — TUI + CLI unifié pour réseaux LoRa MeshCore (ARM64)
+          Description: MeshCore Desktop — TUI + CLI unifié pour réseaux LoRa MeshCore (ARM64)
            Terminal application (TUI ratatui) and command-line interface
            combined in a single binary. Supports BLE, Serial and TCP
            connections. Built for Raspberry Pi 4/5 and other ARM64 Linux.
           CTRL
-          dpkg-deb --build deb meshcore_${VERSION}_arm64.deb
+          dpkg-deb --build deb meshcore-desktop_${VERSION}_arm64.deb
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: meshcore_linux_arm64
+          name: meshcore-desktop_linux_arm64
           path: |
-            meshcore_linux_arm64
-            meshcore_*_arm64.deb
+            meshcore-desktop_linux_arm64
+            meshcore-desktop_*_arm64.deb
 
   release:
     name: Create GitHub Release
@@ -173,36 +173,36 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/**/meshcore_linux_x86_64
-            artifacts/**/meshcore_linux_arm64
-            artifacts/**/meshcore_windows_x64.exe
-            artifacts/**/meshcore_macos_x64
-            artifacts/**/meshcore_macos_arm64
-            artifacts/**/meshcore_*_amd64.deb
-            artifacts/**/meshcore_*_arm64.deb
+            artifacts/**/meshcore-desktop_linux_x86_64
+            artifacts/**/meshcore-desktop_linux_arm64
+            artifacts/**/meshcore-desktop_windows_x64.exe
+            artifacts/**/meshcore-desktop_macos_x64
+            artifacts/**/meshcore-desktop_macos_arm64
+            artifacts/**/meshcore-desktop_*_amd64.deb
+            artifacts/**/meshcore-desktop_*_arm64.deb
           generate_release_notes: true
           draft: false
           prerelease: false
           body: |
-            ## MeshCore — binaire unifié TUI + CLI
+            ## MeshCore Desktop — binaire unifié TUI + CLI
 
-            Un seul exécutable `meshcore` par plateforme.
+            Un seul exécutable `meshcore-desktop` par plateforme.
 
             ### Modes d'utilisation
 
-            - `meshcore`                    lance la TUI ratatui (mode interactif par défaut)
-            - `meshcore <sous-commande>`    exécute en one-shot (scripting)
-            - `meshcore --repl`             ancien REPL rustyline (legacy)
+            - `meshcore-desktop`                    lance la TUI ratatui (mode interactif par défaut)
+            - `meshcore-desktop <sous-commande>`    exécute en one-shot (scripting)
+            - `meshcore-desktop --repl`             ancien REPL rustyline (legacy)
 
             ### Assets
 
             | Plateforme | Binaire | Package |
             |-----------|---------|---------|
-            | Linux x86_64 | `meshcore_linux_x86_64` | `meshcore_*_amd64.deb` |
-            | Linux ARM64 (RPi 4/5) | `meshcore_linux_arm64` | `meshcore_*_arm64.deb` |
-            | Windows x64 | `meshcore_windows_x64.exe` | — |
-            | macOS Intel | `meshcore_macos_x64` | — |
-            | macOS ARM | `meshcore_macos_arm64` | — |
+            | Linux x86_64 | `meshcore-desktop_linux_x86_64` | `meshcore-desktop_*_amd64.deb` |
+            | Linux ARM64 (RPi 4/5) | `meshcore-desktop_linux_arm64` | `meshcore-desktop_*_arm64.deb` |
+            | Windows x64 | `meshcore-desktop_windows_x64.exe` | — |
+            | macOS Intel | `meshcore-desktop_macos_x64` | — |
+            | macOS ARM | `meshcore-desktop_macos_arm64` | — |
 
             ### Notes
 

@@ -18,9 +18,9 @@ use tracing_subscriber::EnvFilter;
 
 #[derive(Parser)]
 #[command(
-    name = "meshcore",
+    name = "meshcore-desktop",
     version,
-    about = "MeshCore — TUI + CLI unifié pour dispositifs LoRa"
+    about = "MeshCore Desktop — TUI + CLI unifié pour dispositifs LoRa"
 )]
 struct Cli {
     /// Port série (ex: /dev/ttyUSB0)
