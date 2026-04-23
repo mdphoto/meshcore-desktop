@@ -1,199 +1,225 @@
 # MeshCore Desktop
 
-Client desktop cross-platform pour les réseaux mesh LoRa [MeshCore](https://meshcore.co.uk/).
-Communiquez hors réseau via BLE, USB ou TCP avec vos dispositifs MeshCore.
+Client cross-platform pour les réseaux mesh LoRa [MeshCore](https://meshcore.co.uk/).
+Communiquez hors réseau via BLE, USB/série ou TCP avec vos dispositifs MeshCore.
 
 **[English version below](#english)**
 
-> **⚠️ Version beta — Testeurs bienvenus !**
->
-> MeshCore Desktop est fonctionnel mais encore jeune. Nous avons besoin de retours sur toutes les plateformes.
-> Si vous rencontrez un problème, ouvrez une [issue](https://github.com/mdphoto/meshcore-desktop/issues).
->
-> | Plateforme | Connexion BLE | Connexion USB/Série | Connexion TCP/WiFi | GUI | CLI |
-> |---|---|---|---|---|---|
-> | Linux x86_64 | ✅ Testé | ❓ À tester | ❓ À tester | ✅ Testé | ✅ Testé |
-> | Windows x64 | ❓ À tester | ❓ À tester | 🔧 Fix v0.2.1 — à valider | ❓ À tester | ❓ À tester |
-> | macOS Intel | ❓ À tester | ❓ À tester | ❓ À tester | ❓ À tester | ❓ À tester |
-> | macOS Apple Silicon | ❓ À tester | ❓ À tester | ❓ À tester | ❓ À tester | ❓ À tester |
-> | Raspberry Pi (ARM64) | ❓ À tester | ❓ À tester | ❓ À tester | — | ❓ À tester |
->
-> **Priorités de test :**
-> 1. 🔧 **Windows TCP** : le port par défaut est maintenant 4403 — vérifier la connexion WiFi companion
-> 2. ❓ **Windows BLE** : appairage et communication avec un device MeshCore
-> 3. ❓ **macOS** : la GUI et la CLI se lancent-elles correctement ?
-> 4. ❓ **Raspberry Pi** : la CLI fonctionne-t-elle en SSH avec un device série ?
-> 5. ❓ **Linux USB/Série et TCP** : connexion série et WiFi companion
+---
+
+## 📢 Changement de cap à partir de v0.3.0 — TUI comme interface principale
+
+Depuis la version **v0.3.0**, le projet bascule sur une **TUI (Terminal User Interface)** construite avec [ratatui](https://ratatui.rs/), distribuée sous forme d'un **binaire unique `meshcore`** qui combine :
+
+- Une **interface interactive complète** (la TUI, lancée par défaut)
+- Un **mode one-shot** pour le scripting (sous-commandes `contacts`, `send`, `channels`, `device`, `battery`)
+- L'**ancien REPL rustyline** (via `--repl`, pour compatibilité)
+
+**Pourquoi ce choix ?** La GUI Tauri posait plusieurs problèmes bloquants :
+- `webkit2gtk` n'est pas installé par défaut sur Arch Linux
+- `webkit2gtk` ne se cross-compile pas depuis Linux → impossible de builder la GUI pour Raspberry Pi, Windows ou macOS sans un Mac / Windows physique
+- Binaires GUI ~80 Mo vs ~7 Mo pour la TUI
+- Cycle de release ~30 min vs ~5 min
+
+La TUI fonctionne **partout** (Linux x86_64 et ARM64, Windows, macOS), via SSH, et utilise 100 % du backend existant.
+
+### 🙏 Pour la GUI — contributions bienvenues
+
+Le code de la GUI Tauri (`crates/meshcore-app` + `frontend/`) **reste dans le repo** et continue à builder via le workflow `release-gui.yml` (manuel). Les fonctionnalités spécifiques à la GUI (cartographie OpenStreetMap, profil SRTM avec zone de Fresnel, 12 langues) ne sont **pas portées** à la TUI.
+
+**Je n'ai pas le temps ni la capacité de maintenir la GUI pour le moment.** Si vous voulez reprendre cette partie du projet et la faire évoluer, vous êtes **très bienvenus** — ouvrez une issue ou une PR, on en discute. La base est propre, bien séparée en crates, 50 commandes IPC Tauri déjà branchées sur le backend Rust.
 
 ---
 
-## Fonctionnalités
+> **⚠️ Version beta — Testeurs bienvenus !**
+>
+> MeshCore Desktop est fonctionnel mais encore jeune. J'ai besoin de retours sur toutes les plateformes.
+> Si vous rencontrez un problème, ouvrez une [issue](https://github.com/mdphoto/meshcore-desktop/issues).
+>
+> | Plateforme | Binaire `meshcore` (TUI + CLI) | BLE | USB/Série | TCP |
+> |---|---|---|---|---|
+> | Linux x86_64 | ✅ Testé | ✅ Testé | ❓ À tester | ❓ À tester |
+> | Linux ARM64 (Pi 4/5) | ❓ À tester | ❓ À tester | ❓ À tester | ❓ À tester |
+> | Windows x64 | ❓ À tester | ❓ À tester | ❓ À tester | ❓ À tester |
+> | macOS Intel | ❓ À tester | ❓ À tester | ❓ À tester | ❓ À tester |
+> | macOS Apple Silicon | ❓ À tester | ❓ À tester | ❓ À tester | ❓ À tester |
+>
+> **Priorités de test :**
+> 1. ❓ **Windows Terminal** : rendu TUI + emojis + BLE via WinRT
+> 2. ❓ **macOS** : permissions Bluetooth + rendu TUI dans Terminal.app / iTerm2
+> 3. ❓ **Raspberry Pi 4/5** : TUI fluide en SSH, BLE via BlueZ
+> 4. ❓ **Connexions USB/Série et TCP** sur toutes les plateformes
 
-- **Messagerie chiffrée** : messages directs P2P et canaux publics/privés
-- **Cartographie** : visualisation des nœuds sur OpenStreetMap, topographique ou satellite
-- **Administration repeater** : connexion admin, terminal CLI, statut, voisins, configuration radio
-- **Analyse ligne de vue** : profil d'élévation SRTM avec zone de Fresnel
-- **Multi-connexion** : BLE, USB série et TCP simultanément
-- **Room Servers** : login, chat de groupe, administration
-- **CLI headless** : REPL interactif pour Raspberry Pi / serveur SSH
-- **Export GPX** : waypoints de tous les nœuds du réseau
-- **12 langues** : FR, EN, ES, DE, IT, PT, NL, PL, JA, ZH, KO, RU
-- **Notifications OS** : alertes natives pour les messages entrants
-- **Deep links** : schéma `meshcore://` pour ouvrir contacts et canaux
-- **Thème sombre/clair**
+## Fonctionnalités TUI (interface principale)
 
-## Captures d'écran
+- **Tab 1 Connexion** : scan BLE, scan série, TCP, liste des connexions actives
+- **Tab 2 Contacts** : liste avec 3 modes de tri (favoris, type, nom), sections repliables (Repeaters / Rooms / Clients / Sensors), sync, favoris, suppression
+- **Tab 3 Chat** : split conversations / historique scrollable / saisie, sticky-bottom, pagination, statuts envoi/livré/échoué
+- **Tab 4 Canaux** : CRUD, mark as read, sync vers device, **édition par canal** (nom, notifications, scope/région persistant)
+- **Tab 5 Device** : infos radio/GPS/TX, jauge batterie, set name / tx power / heure / reboot / advert
+- **Administration repeater** (touche `R` sur un contact repeater) : login, status, voisins, ACL, **CLI libre** avec aide `help` intégrée (commandes région, scope, firmware MeshCore ≥ 1.10)
+- **Auto-reconnect** au dernier dispositif utilisé
+- **Auto-sync contacts** à la connexion, avec spinner animé
+- **Raccourcis robustes** : `F1`-`F5`, `1`-`5`, ou `Alt+1`-`Alt+5` (pour les terminaux qui captent les touches F)
 
-*Bientôt disponibles*
+## Téléchargement v0.3.0
 
-## Téléchargement v0.2.0
+Un seul binaire `meshcore` par plateforme (TUI + CLI combinés).
 
-### Application GUI (desktop avec interface graphique)
-
-| Plateforme | GUI | CLI |
+| Plateforme | Binaire | Package |
 |---|---|---|
-| Linux (Debian/Ubuntu) | [MeshCore.Desktop_0.2.0_amd64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_amd64.deb) | [meshcore-cli_linux_x86_64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_linux_x86_64) |
-| Linux (AppImage) | [MeshCore.Desktop_0.2.0_amd64.AppImage](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_amd64.AppImage) | — |
-| Windows | [MeshCore.Desktop_0.2.0_x64-setup.exe](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_x64-setup.exe) | [meshcore-cli_windows_x64.exe](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_windows_x64.exe) |
-| macOS (Apple Silicon) | [MeshCore.Desktop_0.2.0_aarch64.dmg](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_aarch64.dmg) | [meshcore-cli_macos_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_macos_arm64) |
-| macOS (Intel) | [MeshCore.Desktop_0.2.0_x64.dmg](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_x64.dmg) | [meshcore-cli_macos_x64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_macos_x64) |
+| Linux x86_64 | [meshcore_linux_x86_64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_linux_x86_64) | [meshcore_0.3.0_amd64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_0.3.0_amd64.deb) |
+| Linux ARM64 (Raspberry Pi 4/5) | [meshcore_linux_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_linux_arm64) | [meshcore_0.3.0_arm64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_0.3.0_arm64.deb) |
+| Windows x64 | [meshcore_windows_x64.exe](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_windows_x64.exe) | — |
+| macOS Intel | [meshcore_macos_x64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_macos_x64) | — |
+| macOS Apple Silicon | [meshcore_macos_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_macos_arm64) | — |
 
-### Raspberry Pi (ARM64 — CLI uniquement)
-
-| Format | Téléchargement |
-|---|---|
-| .deb (arm64) | [meshcore-cli_0.2.0_arm64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_0.2.0_arm64.deb) |
-| Binaire brut | [meshcore-cli_linux_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_linux_arm64) |
-
-> **Pourquoi pas de GUI sur Raspberry Pi ?**
-> L'interface graphique (GUI) utilise Tauri qui nécessite webkit2gtk, une bibliothèque impossible à cross-compiler pour ARM64. La CLI offre toutes les fonctionnalités (connexion, messagerie, contacts, administration repeater) et est conçue pour un usage en SSH.
-> Si vous souhaitez la GUI sur un RPi avec écran, vous pouvez [compiler depuis les sources](#compilation-depuis-les-sources) directement sur le Raspberry Pi (nécessite ~2 Go de RAM et ~30 min de compilation).
+> **Binaire ~7 Mo**, statique (sauf libc / libdbus sur Linux), zéro install requise.
 
 ## Installation
 
-### GUI (Linux)
+### Linux
 
 ```bash
-# Debian/Ubuntu
-sudo dpkg -i MeshCore.Desktop_0.2.0_amd64.deb
+# Debian/Ubuntu/Pi OS
+sudo apt install libdbus-1-3          # déjà présent sur la plupart des systèmes
+sudo dpkg -i meshcore_0.3.0_amd64.deb
+meshcore                               # lance la TUI
 
-# Ou AppImage (pas d'installation requise)
-chmod +x MeshCore.Desktop_0.2.0_amd64.AppImage
-./MeshCore.Desktop_0.2.0_amd64.AppImage
+# Ou binaire brut
+chmod +x meshcore_linux_x86_64
+./meshcore_linux_x86_64
 ```
 
-### GUI (Windows)
+### Windows
 
-Lancez `MeshCore.Desktop_0.2.0_x64-setup.exe` et suivez l'installeur.
+1. Télécharger `meshcore_windows_x64.exe`
+2. **Utiliser Windows Terminal** (pré-installé sur Windows 11, gratuit depuis le Microsoft Store sur Windows 10). Le vieux `cmd.exe` / conhost ne gère pas correctement les emojis et les bordures Unicode
+3. Double-cliquer ou lancer depuis PowerShell / Windows Terminal :
 
-### GUI (macOS)
+```powershell
+.\meshcore_windows_x64.exe
+```
 
-Ouvrez le `.dmg` et glissez MeshCore Desktop dans Applications.
-
-### CLI (toutes plateformes)
+### macOS
 
 ```bash
-# Linux / macOS — rendre exécutable
-chmod +x meshcore-cli_linux_x86_64
-./meshcore-cli_linux_x86_64 --help
-
-# Raspberry Pi
-sudo dpkg -i meshcore-cli_0.2.0_arm64.deb
-meshcore-cli --help
+chmod +x meshcore_macos_arm64   # ou meshcore_macos_x64 pour Intel
+./meshcore_macos_arm64
 ```
 
-## Utilisation de la CLI
+> **Permission Bluetooth** : à la première connexion BLE, macOS demandera l'autorisation Bluetooth. Autoriser le terminal (Terminal.app ou iTerm2) dans *Réglages Système → Confidentialité & sécurité → Bluetooth*.
 
-### Mode interactif (REPL)
-
-Idéal pour un Raspberry Pi accessible en SSH :
+### Raspberry Pi (ARM64)
 
 ```bash
-meshcore-cli --port /dev/ttyUSB0
+wget https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_0.3.0_arm64.deb
+sudo dpkg -i meshcore_0.3.0_arm64.deb
+meshcore
 ```
 
-```
-meshcore [/dev/ttyUSB0] > contacts
-Nom                  Clé            Type       Hops   Vu
-Michel               abcdef123456   Client     1      2026-03-28
-Repeater-01          fedcba654321   Repeater   0      2026-03-28
-2 contacts
+## Utilisation
 
-meshcore [/dev/ttyUSB0] > send Michel Salut depuis le toit !
-Envoyé (id: a1b2c3d4)
-
-meshcore [/dev/ttyUSB0] > repeater login fedcba654321 monmdp
-Login envoyé
-
-meshcore [/dev/ttyUSB0] > repeater cli fedcba654321 ver
-MeshCore v1.2.3
-
-meshcore [/dev/ttyUSB0] > quit
-```
-
-### Mode one-shot (scripts)
+### Mode interactif (TUI)
 
 ```bash
-# Lister les contacts
-meshcore-cli --port /dev/ttyUSB0 contacts list
-
-# Envoyer un message
-meshcore-cli --tcp 192.168.1.50:4403 send Michel "Hello mesh !"
-
-# Sortie JSON pour scripting
-meshcore-cli --port /dev/ttyUSB0 --json device
+meshcore                               # lance la TUI avec auto-reconnect
+meshcore --ble MeshCore-AB12           # force une connexion BLE précise
+meshcore --port /dev/ttyUSB0           # force une connexion série
+meshcore --tcp 192.168.1.50:4403       # force une connexion TCP
 ```
 
-### Options de connexion
+Raccourcis principaux (la touche `?` affiche l'aide complète dans la TUI) :
 
-| Option | Exemple | Description |
-|---|---|---|
-| `--port` / `-p` | `--port /dev/ttyUSB0` | Connexion série USB |
-| `--baud` / `-b` | `--baud 115200` | Baud rate (défaut: 115200) |
-| `--tcp` | `--tcp 192.168.1.50:4403` | Connexion TCP |
-| `--ble` | `--ble MeshCore-AB12` | Connexion Bluetooth LE |
-| `--json` | | Sortie JSON |
-| `--verbose` / `-v` | | Logs détaillés |
+| Touches | Action |
+|---|---|
+| `F1`-`F5` ou `1`-`5` ou `Alt+1`-`Alt+5` | Changer d'onglet |
+| `Tab` / `Shift-Tab` | Cycle le focus dans l'onglet |
+| `?` | Aide contextuelle |
+| `q` ou `Ctrl-C` | Quitter |
+
+### Mode one-shot (scripting)
+
+```bash
+meshcore --port /dev/ttyUSB0 contacts list
+meshcore --tcp 192.168.1.50:4403 send Michel "Hello mesh !"
+meshcore --port /dev/ttyUSB0 --json device
+meshcore --ble MeshCore-AB12 battery lipo
+```
+
+### Mode REPL legacy (rustyline)
+
+```bash
+meshcore --repl                        # retrouve l'ancien comportement
+```
+
+### Options globales
+
+| Option | Description |
+|---|---|
+| `-p, --port <PORT>` | Port série (ex: `/dev/ttyUSB0`) |
+| `-b, --baud <BAUD>` | Baud rate (défaut: 115200) |
+| `--tcp <HOST:PORT>` | Connexion TCP |
+| `--ble <NOM>` | Connexion BLE par nom (ex: `MeshCore-AB12`) |
+| `--data-dir <DIR>` | Répertoire de données (défaut: `~/.local/share/meshcore/`) |
+| `--json` | Sortie JSON (mode one-shot uniquement) |
+| `-v, --verbose` | Logs de debug |
+| `--repl` | Ancien REPL rustyline au lieu de la TUI |
 
 ## Compilation depuis les sources
 
 ### Prérequis
 
-- [Rust](https://rustup.rs/) 1.75+
-- [Node.js](https://nodejs.org/) 20+
-- Tauri CLI : `cargo install tauri-cli --version "^2"`
+- [Rust](https://rustup.rs/) stable
+- Linux : `sudo apt install libdbus-1-dev pkg-config`
 
-#### Linux (dépendances système)
-
-```bash
-sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev pkg-config
-```
-
-### Build GUI
+### Build binaire `meshcore` (TUI + CLI)
 
 ```bash
 git clone https://github.com/mdphoto/meshcore-desktop.git
 cd meshcore-desktop
-cd frontend && npm install && npm run build && cd ..
-cargo tauri build
+cargo build --release -p meshcore-cli
+./target/release/meshcore
 ```
 
-### Build CLI seule
+### Cross-compilation (depuis Linux)
 
 ```bash
-cargo build --release -p meshcore-cli
-./target/release/meshcore-cli --help
+# Installer cross
+cargo install cross --git https://github.com/cross-rs/cross --locked
+
+# ARM64 (Raspberry Pi 4/5)
+cross build --release --target aarch64-unknown-linux-gnu -p meshcore-cli
+
+# Windows (MinGW)
+cross build --release --target x86_64-pc-windows-gnu -p meshcore-cli
 ```
+
+macOS nécessite une machine macOS ou un runner GitHub Actions.
 
 ### Tests
 
 ```bash
-# Tests Rust (21 tests)
-cargo test --workspace
-
-# Tests frontend (41 tests)
-cd frontend && npm test
+cargo test --workspace --exclude meshcore-app
 ```
+
+### GUI legacy (optionnel, cherche contributeurs)
+
+Le code de la GUI Tauri reste dans `crates/meshcore-app/` + `frontend/`. Pour la builder :
+
+```bash
+# Deps Linux supplémentaires pour Tauri
+sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+
+# Frontend
+cd frontend && npm install && npm run build && cd ..
+
+# GUI
+cargo install tauri-cli --version "^2"
+cargo tauri build
+```
+
+Ou via le workflow GitHub Actions manuel `release-gui.yml` (onglet Actions → Run workflow).
 
 ## Architecture
 
@@ -203,19 +229,26 @@ meshcore-desktop/
 │   ├── meshcore-protocol/    # Types, compression SMAZ, canaux
 │   ├── meshcore-crypto/      # AES-128-ECB, HMAC-SHA256, Ed25519
 │   ├── meshcore-transport/   # BLE, Serial, TCP, reconnexion auto
-│   ├── meshcore-storage/     # SQLite (contacts, messages, canaux)
-│   ├── meshcore-service/     # Logique métier, état, événements, LOS
-│   ├── meshcore-app/         # Application Tauri GUI, 50 commandes IPC
-│   └── meshcore-cli/         # CLI headless (REPL + one-shot)
-└── frontend/                 # React 19, TypeScript, Tailwind CSS
+│   ├── meshcore-storage/     # SQLite (contacts, messages, canaux, settings)
+│   ├── meshcore-service/     # Logique métier, état, événements
+│   ├── meshcore-tui/         # TUI ratatui (library, entrypoint run_tui)
+│   ├── meshcore-cli/         # Binaire unifié « meshcore » (TUI + CLI + REPL)
+│   └── meshcore-app/         # GUI Tauri legacy (maintenance communautaire)
+└── frontend/                 # React 19, TS, Tailwind (GUI legacy)
 ```
 
-Basé sur la bibliothèque [meshcore-rs](https://crates.io/crates/meshcore-rs) pour le protocole MeshCore.
+Basé sur [meshcore-rs](https://crates.io/crates/meshcore-rs) pour le protocole MeshCore.
 
 ## Matériel compatible
 
 Tous les dispositifs supportés par MeshCore : Heltec, RAK Wireless, Seeed, nRF52.
 Liste complète sur [flasher.meshcore.co.uk](https://flasher.meshcore.co.uk/).
+
+## Contribuer
+
+- **GUI Tauri** : les contributions sont très bienvenues sur la partie GUI — je n'ai pas le temps de la maintenir actuellement
+- **TUI / CLI** : ouvrir une issue ou une PR, toute aide est appréciée
+- **Tests multi-plateformes** : tout retour sur Windows / macOS / Raspberry Pi est précieux
 
 ## Licence
 
@@ -231,169 +264,168 @@ Michel Dessenne — [IELOW SAS](https://ielow.fr)
 
 # MeshCore Desktop (English)
 
-Cross-platform desktop client for [MeshCore](https://meshcore.co.uk/) LoRa mesh networks.
-Communicate off-grid via BLE, USB or TCP with your MeshCore devices.
+Cross-platform client for [MeshCore](https://meshcore.co.uk/) LoRa mesh networks.
+Communicate off-grid via BLE, USB/serial or TCP with your MeshCore devices.
 
-> **⚠️ Beta version — Testers welcome!**
->
-> MeshCore Desktop is functional but still young. We need feedback on all platforms.
-> If you find an issue, please open an [issue](https://github.com/mdphoto/meshcore-desktop/issues).
->
-> | Platform | BLE | USB/Serial | TCP/WiFi | GUI | CLI |
-> |---|---|---|---|---|---|
-> | Linux x86_64 | ✅ Tested | ❓ Untested | ❓ Untested | ✅ Tested | ✅ Tested |
-> | Windows x64 | ❓ Untested | ❓ Untested | 🔧 Fix v0.2.1 — needs validation | ❓ Untested | ❓ Untested |
-> | macOS Intel | ❓ Untested | ❓ Untested | ❓ Untested | ❓ Untested | ❓ Untested |
-> | macOS Apple Silicon | ❓ Untested | ❓ Untested | ❓ Untested | ❓ Untested | ❓ Untested |
-> | Raspberry Pi (ARM64) | ❓ Untested | ❓ Untested | ❓ Untested | — | ❓ Untested |
->
-> **Testing priorities:**
-> 1. 🔧 **Windows TCP**: default port is now 4403 — verify WiFi companion connection
-> 2. ❓ **Windows BLE**: pairing and communication with a MeshCore device
-> 3. ❓ **macOS**: do the GUI and CLI launch correctly?
-> 4. ❓ **Raspberry Pi**: does the CLI work via SSH with a serial device?
-> 5. ❓ **Linux USB/Serial and TCP**: serial and WiFi companion connections
+## 📢 Pivot in v0.3.0 — TUI as the main interface
 
-## Features
+Starting from **v0.3.0**, the project pivots to a **TUI (Terminal User Interface)** built with [ratatui](https://ratatui.rs/), shipped as a **single binary `meshcore`** that combines:
 
-- **Encrypted messaging**: direct P2P messages and public/private channels
-- **Mapping**: node visualization on OpenStreetMap, topographic or satellite tiles
-- **Repeater admin**: admin login, CLI terminal, status, neighbours, radio configuration
-- **Line-of-sight analysis**: SRTM elevation profile with Fresnel zone
-- **Multi-connection**: BLE, USB serial and TCP simultaneously
-- **Room Servers**: login, group chat, administration
-- **Headless CLI**: interactive REPL for Raspberry Pi / SSH server
-- **GPX export**: waypoints for all mesh nodes
-- **12 languages**: FR, EN, ES, DE, IT, PT, NL, PL, JA, ZH, KO, RU
-- **OS notifications**: native alerts for incoming messages
-- **Deep links**: `meshcore://` scheme to open contacts and channels
-- **Dark/light theme**
+- A **full interactive interface** (the TUI, launched by default)
+- A **one-shot mode** for scripting (subcommands `contacts`, `send`, `channels`, `device`, `battery`)
+- The **legacy rustyline REPL** (via `--repl`, kept for compatibility)
 
-## Download v0.2.0
+**Why this pivot?** The Tauri GUI had several blocking issues:
+- `webkit2gtk` not installed by default on Arch Linux
+- `webkit2gtk` cannot be cross-compiled from Linux → no GUI builds for Raspberry Pi, Windows or macOS without a physical Mac / Windows
+- GUI binaries ~80 MB vs ~7 MB for the TUI
+- Release cycle ~30 min vs ~5 min
 
-### GUI Application (desktop with graphical interface)
+The TUI works **everywhere** (Linux x86_64 and ARM64, Windows, macOS), over SSH, and reuses 100% of the existing backend.
 
-| Platform | GUI | CLI |
+### 🙏 GUI — contributions welcome
+
+The Tauri GUI code (`crates/meshcore-app` + `frontend/`) **stays in the repo** and still builds via the manual `release-gui.yml` workflow. GUI-specific features (OpenStreetMap, SRTM elevation profile with Fresnel zone, 12 languages) are **not ported** to the TUI.
+
+**I don't have the time or capacity to maintain the GUI right now.** If you want to pick up this part of the project and evolve it, you are **very welcome** — open an issue or a PR. The codebase is clean, properly split into crates, and 50 Tauri IPC commands are already wired up to the Rust backend.
+
+---
+
+## Main TUI features
+
+- **Tab 1 Connection**: BLE scan, serial scan, TCP input, list of active connections
+- **Tab 2 Contacts**: list with 3 sort modes (favorites, type, name), collapsible sections (Repeaters / Rooms / Clients / Sensors), sync, favorites, delete
+- **Tab 3 Chat**: split conversations / scrollable history / input, sticky-bottom, pagination, sent/delivered/failed indicators
+- **Tab 4 Channels**: CRUD, mark as read, sync to device, **per-channel editing** (name, notifications, persistent scope/region)
+- **Tab 5 Device**: radio/GPS/TX info, battery gauge, set name / tx power / time / reboot / advert
+- **Repeater admin** (press `R` on a repeater contact): login, status, neighbours, ACL, **free CLI** with built-in `help` (region, scope, MeshCore firmware ≥ 1.10)
+- **Auto-reconnect** to the last device used
+- **Auto-sync contacts** on connection, with animated spinner
+- **Robust keyboard shortcuts**: `F1`-`F5`, `1`-`5`, or `Alt+1`-`Alt+5` (for terminals that grab the F keys)
+
+## Download v0.3.0
+
+One `meshcore` binary per platform (TUI + CLI combined).
+
+| Platform | Binary | Package |
 |---|---|---|
-| Linux (Debian/Ubuntu) | [.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_amd64.deb) | [meshcore-cli_linux_x86_64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_linux_x86_64) |
-| Linux (AppImage) | [.AppImage](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_amd64.AppImage) | — |
-| Windows | [.exe](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_x64-setup.exe) | [meshcore-cli_windows_x64.exe](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_windows_x64.exe) |
-| macOS (Apple Silicon) | [.dmg](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_aarch64.dmg) | [meshcore-cli_macos_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_macos_arm64) |
-| macOS (Intel) | [.dmg](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/MeshCore.Desktop_0.1.0_x64.dmg) | [meshcore-cli_macos_x64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_macos_x64) |
+| Linux x86_64 | [meshcore_linux_x86_64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_linux_x86_64) | [meshcore_0.3.0_amd64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_0.3.0_amd64.deb) |
+| Linux ARM64 (Raspberry Pi 4/5) | [meshcore_linux_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_linux_arm64) | [meshcore_0.3.0_arm64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_0.3.0_arm64.deb) |
+| Windows x64 | [meshcore_windows_x64.exe](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_windows_x64.exe) | — |
+| macOS Intel | [meshcore_macos_x64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_macos_x64) | — |
+| macOS Apple Silicon | [meshcore_macos_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_macos_arm64) | — |
 
-### Raspberry Pi (ARM64 — CLI only)
-
-| Format | Download |
-|---|---|
-| .deb (arm64) | [meshcore-cli_0.2.0_arm64.deb](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_0.2.0_arm64.deb) |
-| Raw binary | [meshcore-cli_linux_arm64](https://github.com/mdphoto/meshcore-desktop/releases/download/v0.2.0/meshcore-cli_linux_arm64) |
-
-> **Why no GUI on Raspberry Pi?**
-> The graphical interface (GUI) uses Tauri which requires webkit2gtk, a library that cannot be cross-compiled for ARM64. The CLI provides all features (connection, messaging, contacts, repeater admin) and is designed for SSH usage.
-> If you want the GUI on a RPi with a screen, you can [build from source](#building-from-source) directly on the Raspberry Pi (requires ~2 GB RAM and ~30 min build time).
+> **~7 MB binary**, mostly static, zero install required.
 
 ## Installation
 
-### GUI (Linux)
+### Linux
 
 ```bash
-sudo dpkg -i MeshCore.Desktop_0.2.0_amd64.deb
-# Or AppImage:
-chmod +x MeshCore.Desktop_0.2.0_amd64.AppImage && ./MeshCore.Desktop_0.2.0_amd64.AppImage
+sudo apt install libdbus-1-3
+sudo dpkg -i meshcore_0.3.0_amd64.deb
+meshcore                               # launch the TUI
 ```
 
-### GUI (Windows)
+### Windows
 
-Run `MeshCore.Desktop_0.2.0_x64-setup.exe` and follow the installer.
+1. Download `meshcore_windows_x64.exe`
+2. **Use Windows Terminal** (preinstalled on Windows 11, free in Microsoft Store on Windows 10). Old `cmd.exe` / conhost does not render emojis and Unicode borders well
+3. Double-click or run from PowerShell / Windows Terminal:
 
-### GUI (macOS)
+```powershell
+.\meshcore_windows_x64.exe
+```
 
-Open the `.dmg` and drag MeshCore Desktop to Applications.
-
-### CLI (all platforms)
+### macOS
 
 ```bash
-chmod +x meshcore-cli_linux_x86_64
-./meshcore-cli_linux_x86_64 --help
-
-# Raspberry Pi
-sudo dpkg -i meshcore-cli_0.2.0_arm64.deb
-meshcore-cli --help
+chmod +x meshcore_macos_arm64
+./meshcore_macos_arm64
 ```
 
-## CLI Usage
+> **Bluetooth permission**: on first BLE connection, macOS will ask for Bluetooth permission. Authorize the terminal (Terminal.app or iTerm2) in *System Settings → Privacy & Security → Bluetooth*.
 
-### Interactive mode (REPL)
-
-Ideal for a Raspberry Pi accessible via SSH:
+### Raspberry Pi (ARM64)
 
 ```bash
-meshcore-cli --port /dev/ttyUSB0
+wget https://github.com/mdphoto/meshcore-desktop/releases/download/v0.3.0/meshcore_0.3.0_arm64.deb
+sudo dpkg -i meshcore_0.3.0_arm64.deb
+meshcore
 ```
 
+## Usage
+
+### Interactive mode (TUI)
+
+```bash
+meshcore                               # launches the TUI with auto-reconnect
+meshcore --ble MeshCore-AB12
+meshcore --port /dev/ttyUSB0
+meshcore --tcp 192.168.1.50:4403
 ```
-meshcore [/dev/ttyUSB0] > contacts
-meshcore [/dev/ttyUSB0] > send Michel Hello from the roof!
-meshcore [/dev/ttyUSB0] > repeater login fedcba654321 mypassword
-meshcore [/dev/ttyUSB0] > repeater cli fedcba654321 ver
-meshcore [/dev/ttyUSB0] > quit
-```
+
+Main shortcuts (press `?` for full help in the TUI):
+
+| Keys | Action |
+|---|---|
+| `F1`-`F5` or `1`-`5` or `Alt+1`-`Alt+5` | Switch tab |
+| `Tab` / `Shift-Tab` | Cycle focus within a tab |
+| `?` | Contextual help |
+| `q` or `Ctrl-C` | Quit |
 
 ### One-shot mode (scripting)
 
 ```bash
-meshcore-cli --port /dev/ttyUSB0 contacts list
-meshcore-cli --tcp 192.168.1.50:4403 --json device
-meshcore-cli --port /dev/ttyUSB0 send Michel "Hello mesh!"
+meshcore --port /dev/ttyUSB0 contacts list
+meshcore --tcp 192.168.1.50:4403 send Michel "Hello mesh!"
+meshcore --port /dev/ttyUSB0 --json device
 ```
 
-### Connection options
+### Legacy REPL mode
 
-| Option | Example | Description |
-|---|---|---|
-| `--port` / `-p` | `--port /dev/ttyUSB0` | Serial USB connection |
-| `--baud` / `-b` | `--baud 115200` | Baud rate (default: 115200) |
-| `--tcp` | `--tcp 192.168.1.50:4403` | TCP connection |
-| `--ble` | `--ble MeshCore-AB12` | Bluetooth LE connection |
-| `--json` | | JSON output |
-| `--verbose` / `-v` | | Detailed logs |
+```bash
+meshcore --repl                        # old rustyline REPL
+```
 
 ## Building from source
 
 ### Prerequisites
 
-- [Rust](https://rustup.rs/) 1.75+
-- [Node.js](https://nodejs.org/) 20+
-- Tauri CLI: `cargo install tauri-cli --version "^2"`
+- [Rust](https://rustup.rs/) stable
+- Linux: `sudo apt install libdbus-1-dev pkg-config`
 
-#### Linux (system dependencies)
-
-```bash
-sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev pkg-config
-```
-
-### Build GUI
+### Build `meshcore` binary (TUI + CLI)
 
 ```bash
 git clone https://github.com/mdphoto/meshcore-desktop.git
 cd meshcore-desktop
+cargo build --release -p meshcore-cli
+./target/release/meshcore
+```
+
+### Cross-compilation (from Linux)
+
+```bash
+cargo install cross --git https://github.com/cross-rs/cross --locked
+cross build --release --target aarch64-unknown-linux-gnu -p meshcore-cli
+cross build --release --target x86_64-pc-windows-gnu -p meshcore-cli
+```
+
+macOS requires an actual macOS machine or GitHub Actions runner.
+
+### Legacy GUI (optional, looking for maintainers)
+
+The Tauri GUI code stays in `crates/meshcore-app/` + `frontend/`. To build it:
+
+```bash
+sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
 cd frontend && npm install && npm run build && cd ..
+cargo install tauri-cli --version "^2"
 cargo tauri build
 ```
 
-### Build CLI only
-
-```bash
-cargo build --release -p meshcore-cli
-./target/release/meshcore-cli --help
-```
-
-### Tests
-
-```bash
-cargo test --workspace     # 21 Rust tests
-cd frontend && npm test    # 41 frontend tests
-```
+Or via the manual `release-gui.yml` GitHub Actions workflow.
 
 ## Architecture
 
@@ -403,11 +435,12 @@ meshcore-desktop/
 │   ├── meshcore-protocol/    # Types, SMAZ compression, channels
 │   ├── meshcore-crypto/      # AES-128-ECB, HMAC-SHA256, Ed25519
 │   ├── meshcore-transport/   # BLE, Serial, TCP, auto-reconnect
-│   ├── meshcore-storage/     # SQLite (contacts, messages, channels)
-│   ├── meshcore-service/     # Business logic, state, events, LOS
-│   ├── meshcore-app/         # Tauri GUI application, 50 IPC commands
-│   └── meshcore-cli/         # Headless CLI (REPL + one-shot)
-└── frontend/                 # React 19, TypeScript, Tailwind CSS
+│   ├── meshcore-storage/     # SQLite (contacts, messages, channels, settings)
+│   ├── meshcore-service/     # Business logic, state, events
+│   ├── meshcore-tui/         # ratatui TUI (library, entrypoint run_tui)
+│   ├── meshcore-cli/         # Unified binary « meshcore » (TUI + CLI + REPL)
+│   └── meshcore-app/         # Legacy Tauri GUI (community-maintained)
+└── frontend/                 # React 19, TS, Tailwind (legacy GUI)
 ```
 
 Built on top of [meshcore-rs](https://crates.io/crates/meshcore-rs) for the MeshCore protocol.
@@ -416,6 +449,12 @@ Built on top of [meshcore-rs](https://crates.io/crates/meshcore-rs) for the Mesh
 
 All MeshCore-supported devices: Heltec, RAK Wireless, Seeed, nRF52.
 Full list at [flasher.meshcore.co.uk](https://flasher.meshcore.co.uk/).
+
+## Contributing
+
+- **Tauri GUI**: contributions very welcome on the GUI side — I don't have bandwidth to maintain it right now
+- **TUI / CLI**: open an issue or PR, any help appreciated
+- **Multi-platform testing**: feedback on Windows / macOS / Raspberry Pi is very valuable
 
 ## License
 
