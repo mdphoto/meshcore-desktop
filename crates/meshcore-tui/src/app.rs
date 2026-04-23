@@ -1431,6 +1431,9 @@ impl App {
                 self.ui
                     .toast(format!("Connecté à {}", device_name), ToastLevel::Success);
                 conn_actions::refresh_list(self.service.clone(), self.action_tx.clone());
+                // Recharger les canaux : le service les a rafraîchis depuis le device
+                // pendant le handshake (get_channel 0..8) → l'UI doit les relire en DB
+                channel_actions::reload(self.service.clone(), self.action_tx.clone());
                 // Auto-sync des contacts dès la connexion établie
                 if !self.ui.contacts_syncing {
                     self.start_contacts_sync();
