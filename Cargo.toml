@@ -12,7 +12,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
 license = "MIT"
 authors = ["Michel Dessenne"]
@@ -43,8 +43,9 @@ anyhow = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-# MeshCore protocol
-meshcore-rs = "0.1"
+# MeshCore protocol — pinné à 0.1.9, la 0.1.10+ introduit une API cassante sur
+# request_neighbours_with_timeout (4 → 6 args) qui doit être portée avant upgrade
+meshcore-rs = "=0.1.9"
 
 # Crypto
 aes = "0.8"

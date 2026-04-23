@@ -5,5 +5,4 @@
 *.db-journal
 *.db-wal
 *.db-shm
-Cargo.lock
 *.gpx
