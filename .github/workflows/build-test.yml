@@ -52,15 +52,15 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ""
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
 
-      - name: Build CLI
+      - name: Build meshcore (binaire unifié TUI+CLI)
         run: cargo build --release --target x86_64-pc-windows-msvc --package meshcore-cli
 
-      - name: Upload GUI artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: meshcore-desktop-windows-test
           path: |
             target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
             target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
-            target/x86_64-pc-windows-msvc/release/meshcore-cli.exe
+            target/x86_64-pc-windows-msvc/release/meshcore.exe
           retention-days: 7

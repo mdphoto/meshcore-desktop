@@ -1,5 +1,11 @@
 name: Release
 
+# Workflow de release principal — build le binaire unifié `meshcore` (TUI + CLI)
+# pour 5 cibles : Linux x86_64, Linux ARM64, Windows x64, macOS Intel, macOS ARM.
+#
+# Léger (~5 min/build) car sans Tauri/WebKit. Pour ressortir une GUI legacy, utiliser
+# manuellement le workflow `release-gui.yml`.
+
 on:
   push:
     tags:
@@ -9,8 +15,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-    name: Build (${{ matrix.target }})
+  build-native:
+    name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -18,16 +24,20 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            cli_name: meshcore-cli
+            binary_suffix: ""
+            asset_name: meshcore_linux_x86_64
           - target: x86_64-pc-windows-msvc
             os: windows-latest
-            cli_name: meshcore-cli.exe
+            binary_suffix: ".exe"
+            asset_name: meshcore_windows_x64.exe
           - target: x86_64-apple-darwin
             os: macos-latest
-            cli_name: meshcore-cli
+            binary_suffix: ""
+            asset_name: meshcore_macos_x64
           - target: aarch64-apple-darwin
             os: macos-latest
-            cli_name: meshcore-cli
+            binary_suffix: ""
+            asset_name: meshcore_macos_arm64
 
     steps:
       - uses: actions/checkout@v4
@@ -36,28 +46,11 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev pkg-config
+          sudo apt-get install -y libdbus-1-dev pkg-config
 
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install frontend deps
-        working-directory: frontend
-        run: npm ci
-
-      - name: Build frontend
-        working-directory: frontend
-        run: npm run build
-
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2"
 
       - uses: actions/cache@v4
         with:
@@ -67,107 +60,102 @@ jobs:
             target
           key: ${{ runner.os }}-${{ matrix.target }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build Tauri GUI
-        run: cargo tauri build --target ${{ matrix.target }}
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ""
-
-      - name: Build CLI
+      - name: Build meshcore
         run: cargo build --release --target ${{ matrix.target }} --package meshcore-cli
 
-      - name: Rename CLI binary
+      - name: Rename binary
         shell: bash
         run: |
-          TARGET=${{ matrix.target }}
-          SRC="target/${TARGET}/release/${{ matrix.cli_name }}"
-          # Nommer selon la plateforme
-          case "${TARGET}" in
-            x86_64-unknown-linux-gnu)   DEST="meshcore-cli_linux_x86_64" ;;
-            x86_64-pc-windows-msvc)     DEST="meshcore-cli_windows_x64.exe" ;;
-            x86_64-apple-darwin)        DEST="meshcore-cli_macos_x64" ;;
-            aarch64-apple-darwin)       DEST="meshcore-cli_macos_arm64" ;;
-            *)                          DEST="meshcore-cli_${TARGET}" ;;
-          esac
+          SRC="target/${{ matrix.target }}/release/meshcore${{ matrix.binary_suffix }}"
+          DEST="${{ matrix.asset_name }}"
           cp "${SRC}" "${DEST}"
-          echo "CLI_FILE=${DEST}" >> $GITHUB_ENV
 
-      - name: Upload GUI artifacts (Linux)
-        if: runner.os == 'Linux'
+      - name: Package .deb (Linux x86_64)
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          mkdir -p deb/DEBIAN deb/usr/bin
+          cp target/${{ matrix.target }}/release/meshcore deb/usr/bin/
+          chmod +x deb/usr/bin/meshcore
+          cat > deb/DEBIAN/control <<CTRL
+          Package: meshcore
+          Version: ${VERSION}
+          Section: comm
+          Priority: optional
+          Architecture: amd64
+          Depends: libc6, libdbus-1-3
+          Maintainer: Michel Dessenne
+          Description: MeshCore — TUI + CLI unifié pour réseaux LoRa MeshCore
+           Terminal application (TUI ratatui) and command-line interface
+           combined in a single binary. Supports BLE, Serial and TCP
+           connections to MeshCore devices.
+          CTRL
+          dpkg-deb --build deb meshcore_${VERSION}_amd64.deb
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: linux-${{ matrix.target }}
+          name: ${{ matrix.asset_name }}
           path: |
-            target/${{ matrix.target }}/release/bundle/deb/*.deb
-            target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
-            meshcore-cli_linux_*
+            ${{ matrix.asset_name }}
+            meshcore_*_amd64.deb
 
-      - name: Upload GUI artifacts (Windows)
-        if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-${{ matrix.target }}
-          path: |
-            target/${{ matrix.target }}/release/bundle/nsis/*.exe
-            meshcore-cli_windows_*
-
-      - name: Upload GUI artifacts (macOS)
-        if: runner.os == 'macOS'
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-${{ matrix.target }}
-          path: |
-            target/${{ matrix.target }}/release/bundle/dmg/*.dmg
-            meshcore-cli_macos_*
-
-  build-cli-arm64:
-    name: Build CLI (ARM64 Linux - Raspberry Pi)
+  build-linux-arm64:
+    name: Build aarch64-unknown-linux-gnu (cross Docker)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: Install deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libdbus-1-dev pkg-config
-          cargo install cross --git https://github.com/cross-rs/cross
+      - name: Install cross
+        run: cargo install cross --git https://github.com/cross-rs/cross --locked
 
-      - name: Build meshcore-cli for ARM64 via cross (Docker)
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ubuntu-cross-arm64-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build meshcore ARM64 via cross
         run: cross build --release --target aarch64-unknown-linux-gnu --package meshcore-cli
 
-      - name: Package ARM64 .deb
+      - name: Rename binary
+        run: cp target/aarch64-unknown-linux-gnu/release/meshcore meshcore_linux_arm64
+
+      - name: Package .deb (Linux ARM64)
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           mkdir -p deb/DEBIAN deb/usr/bin
-          cp target/aarch64-unknown-linux-gnu/release/meshcore-cli deb/usr/bin/
+          cp target/aarch64-unknown-linux-gnu/release/meshcore deb/usr/bin/
+          chmod +x deb/usr/bin/meshcore
           cat > deb/DEBIAN/control <<CTRL
-          Package: meshcore-cli
+          Package: meshcore
           Version: ${VERSION}
           Section: comm
           Priority: optional
           Architecture: arm64
+          Depends: libc6, libdbus-1-3
           Maintainer: Michel Dessenne
-          Description: MeshCore CLI for LoRa mesh networks
-           Command-line tool for communicating with MeshCore devices
-           via Serial, TCP or BLE. Designed for headless Raspberry Pi.
+          Description: MeshCore — TUI + CLI unifié pour réseaux LoRa MeshCore (ARM64)
+           Terminal application (TUI ratatui) and command-line interface
+           combined in a single binary. Supports BLE, Serial and TCP
+           connections. Built for Raspberry Pi 4/5 and other ARM64 Linux.
           CTRL
-          dpkg-deb --build deb meshcore-cli_${VERSION}_arm64.deb
+          dpkg-deb --build deb meshcore_${VERSION}_arm64.deb
 
-      - name: Rename binary
-        run: cp target/aarch64-unknown-linux-gnu/release/meshcore-cli meshcore-cli_linux_arm64
-
-      - name: Upload artifacts
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cli-arm64
+          name: meshcore_linux_arm64
           path: |
-            meshcore-cli_*_arm64.deb
-            meshcore-cli_linux_arm64
+            meshcore_linux_arm64
+            meshcore_*_arm64.deb
 
   release:
-    name: Create Release
-    needs: [build, build-cli-arm64]
+    name: Create GitHub Release
+    needs: [build-native, build-linux-arm64]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -185,11 +173,39 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/**/*.deb
-            artifacts/**/*.AppImage
-            artifacts/**/*.exe
-            artifacts/**/*.dmg
-            artifacts/**/meshcore-cli_*
+            artifacts/**/meshcore_linux_x86_64
+            artifacts/**/meshcore_linux_arm64
+            artifacts/**/meshcore_windows_x64.exe
+            artifacts/**/meshcore_macos_x64
+            artifacts/**/meshcore_macos_arm64
+            artifacts/**/meshcore_*_amd64.deb
+            artifacts/**/meshcore_*_arm64.deb
           generate_release_notes: true
           draft: false
           prerelease: false
+          body: |
+            ## MeshCore — binaire unifié TUI + CLI
+
+            Un seul exécutable `meshcore` par plateforme.
+
+            ### Modes d'utilisation
+
+            - `meshcore`                    lance la TUI ratatui (mode interactif par défaut)
+            - `meshcore <sous-commande>`    exécute en one-shot (scripting)
+            - `meshcore --repl`             ancien REPL rustyline (legacy)
+
+            ### Assets
+
+            | Plateforme | Binaire | Package |
+            |-----------|---------|---------|
+            | Linux x86_64 | `meshcore_linux_x86_64` | `meshcore_*_amd64.deb` |
+            | Linux ARM64 (RPi 4/5) | `meshcore_linux_arm64` | `meshcore_*_arm64.deb` |
+            | Windows x64 | `meshcore_windows_x64.exe` | — |
+            | macOS Intel | `meshcore_macos_x64` | — |
+            | macOS ARM | `meshcore_macos_arm64` | — |
+
+            ### Notes
+
+            - **Windows** : Windows Terminal fortement recommandé pour les emojis et le rendu ANSI
+            - **macOS** : autoriser l'accès Bluetooth dans *Réglages → Confidentialité* à la première connexion
+            - **Linux** : BlueZ requis pour le BLE (installé par défaut dans la plupart des distributions)
