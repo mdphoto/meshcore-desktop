@@ -1,0 +1,48 @@
+[package]
+name = "meshcore-tui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "TUI ratatui pour dispositifs MeshCore LoRa"
+
+[[bin]]
+name = "meshcore-tui"
+path = "src/main.rs"
+
+[dependencies]
+# Crates internes
+meshcore-service = { path = "../meshcore-service" }
+meshcore-transport = { path = "../meshcore-transport" }
+meshcore-storage = { path = "../meshcore-storage" }
+meshcore-protocol = { path = "../meshcore-protocol" }
+
+# Workspace reuse
+tokio = { workspace = true }
+clap = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+dirs = { workspace = true }
+chrono = { workspace = true }
+
+# TUI
+ratatui = "0.29"
+crossterm = { version = "0.28", features = ["event-stream"] }
+tui-input = "0.11"
+throbber-widgets-tui = "0.8"
+unicode-width = "0.2"
+futures = "0.3"
+
+# BLE pour scan (indépendant de meshcore-rs qui est encapsulé)
+btleplug = { workspace = true }
+tokio-serial = { workspace = true }
+uuid = { workspace = true }
+
+[features]
+default = []
+devlog = ["dep:tui-logger"]
+
+[dependencies.tui-logger]
+version = "0.14"
+optional = true

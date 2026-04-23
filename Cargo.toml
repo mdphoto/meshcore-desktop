@@ -8,6 +8,7 @@ members = [
     "crates/meshcore-service",
     "crates/meshcore-app",
     "crates/meshcore-cli",
+    "crates/meshcore-tui",
 ]
 
 [workspace.package]
