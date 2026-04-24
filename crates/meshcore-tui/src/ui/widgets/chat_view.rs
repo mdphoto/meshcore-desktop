@@ -18,9 +18,12 @@ pub fn render(
     scroll_offset: u16,
     focused: bool,
 ) {
+    // Le titre (nom du canal / DM) est toujours affiché en accent cyan bold
+    // indépendamment du focus de la zone, pour que l'utilisateur repère toujours
+    // d'un coup d'œil dans quelle conversation il se trouve.
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(title.to_string())
+        .title(Span::styled(title.to_string(), theme::title()))
         .border_style(if focused {
             theme::focused_border()
         } else {

@@ -156,6 +156,10 @@ pub struct App {
     /// Évite de redemander le mot de passe à chaque visite.
     /// Reset sur AppEvent::Disconnected.
     pub rooms_logged_in: std::collections::HashSet<String>,
+    /// Pubkeys des rooms dont le dernier login a échoué (mauvais password, timeout).
+    /// Utilisé pour afficher la room en rouge dans la liste chat.
+    /// Reset à la prochaine tentative de login.
+    pub rooms_login_failed: std::collections::HashSet<String>,
     pub action_tx: UnboundedSender<Action>,
     pub auto_reconnect_on_startup: bool,
 }
@@ -183,6 +187,7 @@ impl App {
             channel_scopes: std::collections::HashMap::new(),
             dm_pubkeys: Vec::new(),
             rooms_logged_in: std::collections::HashSet::new(),
+            rooms_login_failed: std::collections::HashSet::new(),
             action_tx,
             auto_reconnect_on_startup: false,
         }
@@ -503,6 +508,10 @@ impl App {
                 {
                     let password = self.ui.room_login_password.clone();
                     self.ui.pop_modal();
+                    // Nouvelle tentative : clear l'état failed précédent
+                    self.rooms_login_failed.remove(&pubkey);
+                    // Pendant l'attente : NI success NI failed, juste pending
+                    self.rooms_logged_in.remove(&pubkey);
                     self.ui.room_login_pending = Some((
                         pubkey.clone(),
                         name.clone(),
@@ -514,8 +523,10 @@ impl App {
                         password,
                         self.action_tx.clone(),
                     );
-                    // Activation provisoire pour que la conv soit visible pendant l'attente
-                    // (le marquage loggé définitif se fait sur RoomLoginResult Ok)
+                    // Activation provisoire pour afficher la conv pendant l'attente.
+                    // On marque aussi rooms_logged_in provisoirement pour que
+                    // `chat_activate` ne rouvre pas la modale en boucle. Sera retiré
+                    // sur RoomLoginResult(Err).
                     self.rooms_logged_in.insert(pubkey.clone());
                     self.chat_activate(ConversationId::Dm(pubkey));
                 }
@@ -1982,6 +1993,7 @@ impl App {
                 self.ui.connected = false;
                 self.ui.toast("Déconnexion", ToastLevel::Warn);
                 self.rooms_logged_in.clear();
+                self.rooms_login_failed.clear();
                 conn_actions::refresh_list(self.service.clone(), self.action_tx.clone());
             }
             AppEvent::Reconnecting { attempt } => {
@@ -2265,7 +2277,8 @@ impl App {
                             format!("✓ Connecté à {}", name),
                             ToastLevel::Success,
                         );
-                        self.rooms_logged_in.insert(pubkey);
+                        self.rooms_logged_in.insert(pubkey.clone());
+                        self.rooms_login_failed.remove(&pubkey);
                     }
                     Err(e) => {
                         self.ui.toast(
@@ -2273,6 +2286,7 @@ impl App {
                             ToastLevel::Error,
                         );
                         self.rooms_logged_in.remove(&pubkey);
+                        self.rooms_login_failed.insert(pubkey);
                     }
                 }
             }

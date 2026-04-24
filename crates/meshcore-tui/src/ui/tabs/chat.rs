@@ -93,9 +93,35 @@ fn render_conversations(frame: &mut Frame, area: Rect, app: &App) {
         } else {
             String::new()
         };
+        // État de login d'une room → couleur du nom :
+        //   - pending  → orange (warn_style)
+        //   - success  → vert (ok_style)
+        //   - failed   → rouge (err_style)
+        //   - non-tenté → normal
+        let name_style = if let (ConversationKind::Room, ConversationId::Dm(pk)) =
+            (s.kind, &s.id)
+        {
+            let is_pending = app
+                .ui
+                .room_login_pending
+                .as_ref()
+                .is_some_and(|(ppk, _, _)| ppk == pk);
+            if is_pending {
+                theme::warn_style()
+            } else if app.rooms_logged_in.contains(pk) {
+                theme::ok_style()
+            } else if app.rooms_login_failed.contains(pk) {
+                theme::err_style()
+            } else {
+                ratatui::style::Style::default()
+            }
+        } else {
+            ratatui::style::Style::default()
+        };
         let mut lines = Vec::new();
         lines.push(Line::from(vec![
-            Span::raw(format!(" {} {}", marker, truncate(&s.display_name, 20))),
+            Span::raw(format!(" {} ", marker)),
+            Span::styled(truncate(&s.display_name, 20), name_style),
             Span::styled(unread, theme::warn_style()),
         ]));
         if let Some(last) = &s.last_message {
