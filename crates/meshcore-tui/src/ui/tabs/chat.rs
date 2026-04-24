@@ -167,10 +167,15 @@ fn render_right_panel(frame: &mut Frame, area: Rect, app: &App) {
     crate::ui::widgets::input_box::render(
         frame,
         chunks[1],
-        " Message (Entrée pour envoyer) ",
+        " Message (Entrée pour envoyer — @nom pour mentionner) ",
         &app.chat_ui.input,
         input_focused,
     );
+
+    // Popup @mention rendu au-dessus de l'input si ouvert
+    if let Some(mention) = app.chat_ui.mention.as_ref() {
+        crate::ui::widgets::mention_popup::render(frame, chunks[1], mention);
+    }
 
     render_hints(frame, chunks[2], app);
 }

@@ -7,6 +7,59 @@ use tokio::sync::mpsc::UnboundedSender;
 /// Charge depuis la DB les pubkeys de tous les contacts ayant des messages DM,
 /// triées par dernier message. Utilisé pour afficher les conversations existantes
 /// au démarrage, même sans clic préalable.
+/// Charge les noms distincts des expéditeurs d'un canal pour l'autocomplétion @mention.
+///
+/// Combine :
+/// 1. `sender_name` non-vides de la DB (nouveaux messages après le fix d'insertion)
+/// 2. Extraction depuis le text des messages entrants (pour les anciens messages où
+///    `sender_name` est vide — convention `« Alice: … »` utilisée dans les canaux MeshCore)
+pub fn load_channel_senders(
+    state: Arc<AppState>,
+    channel_idx: u8,
+    action_tx: UnboundedSender<Action>,
+) {
+    tokio::spawn(async move {
+        use crate::util::format::extract_sender_name;
+
+        let mut names: Vec<String> = Vec::new();
+        let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+        // 1. Noms déjà remplis dans sender_name
+        if let Ok(stored) =
+            meshcore_service::messaging::get_channel_sender_names(&state, channel_idx, 100)
+        {
+            for n in stored {
+                if seen.insert(n.to_lowercase()) {
+                    names.push(n);
+                }
+            }
+        }
+
+        // 2. Noms extraits depuis le préfixe des texts (cas legacy)
+        if let Ok(texts) =
+            meshcore_service::messaging::get_channel_incoming_texts(&state, channel_idx, 500)
+        {
+            for t in texts {
+                if let Some(name) = extract_sender_name(&t)
+                    && seen.insert(name.to_lowercase())
+                {
+                    names.push(name);
+                }
+            }
+        }
+
+        tracing::info!(
+            "tui: load_channel_senders({}) → {} noms",
+            channel_idx,
+            names.len()
+        );
+        let _ = action_tx.send(Action::Async(AsyncResult::ChannelSenderNamesLoaded {
+            channel_idx,
+            names,
+        }));
+    });
+}
+
 pub fn reload_dm_pubkeys(state: Arc<AppState>, action_tx: UnboundedSender<Action>) {
     tokio::spawn(async move {
         match meshcore_service::messaging::get_dm_pubkeys(&state) {

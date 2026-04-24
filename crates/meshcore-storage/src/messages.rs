@@ -119,6 +119,53 @@ pub fn get_dm_contact_pubkeys(conn: &Connection) -> Result<Vec<String>, StorageE
     Ok(merged)
 }
 
+/// Retourne les noms distincts des expéditeurs d'un canal (hors nom vide),
+/// triés par timestamp du dernier message (desc). Utilisé pour l'autocomplétion
+/// des mentions `@user` dans le champ de saisie.
+pub fn get_channel_sender_names(
+    conn: &Connection,
+    channel_idx: u8,
+    limit: u32,
+) -> Result<Vec<String>, StorageError> {
+    let mut stmt = conn.prepare(
+        "SELECT sender_name, MAX(timestamp) AS last_ts
+         FROM messages
+         WHERE channel_idx = ?1
+           AND sender_name IS NOT NULL
+           AND sender_name != ''
+         GROUP BY sender_name
+         ORDER BY last_ts DESC
+         LIMIT ?2",
+    )?;
+    let names = stmt
+        .query_map(params![channel_idx, limit], |row| row.get::<_, String>(0))?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(names)
+}
+
+/// Retourne les `text` (+ timestamp) des messages reçus d'un canal, triés par
+/// timestamp desc. Utilisé pour extraire a posteriori les noms d'expéditeurs
+/// depuis le préfixe textuel (« Alice: … »), car le protocole MeshCore ne
+/// transmet pas le nom côté messages canal.
+pub fn get_channel_incoming_texts(
+    conn: &Connection,
+    channel_idx: u8,
+    limit: u32,
+) -> Result<Vec<String>, StorageError> {
+    let mut stmt = conn.prepare(
+        "SELECT text
+         FROM messages
+         WHERE channel_idx = ?1
+           AND direction = 'incoming'
+         ORDER BY timestamp DESC
+         LIMIT ?2",
+    )?;
+    let texts = stmt
+        .query_map(params![channel_idx, limit], |row| row.get::<_, String>(0))?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(texts)
+}
+
 /// Supprime les messages d'une conversation (matching par prefix ou clé complète)
 pub fn delete_conversation(conn: &Connection, contact_pubkey: &str) -> Result<u64, StorageError> {
     let pattern = format!("{}%", contact_pubkey);

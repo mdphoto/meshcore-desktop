@@ -99,6 +99,48 @@ pub fn copy_to_clipboard(text: &str) -> std::io::Result<()> {
     Ok(())
 }
 
+/// Extrait le nom d'expéditeur depuis le texte d'un message canal.
+///
+/// Le protocole MeshCore n'inclut pas le nom dans les messages canal binaires
+/// (seul le texte est transmis). Par convention, les utilisateurs préfixent
+/// leur message avec leur nom : `Alice: bonjour`, `Bob> hello`, `[Charlie] hi`.
+///
+/// Retourne `Some(nom)` si un pattern reconnu est trouvé en début de message,
+/// sinon `None`. Le nom extrait est trimmé et validé (1..=32 chars, charset alnum+_-.).
+pub fn extract_sender_name(text: &str) -> Option<String> {
+    let text = text.trim_start();
+
+    // Essayons les séparateurs les plus courants
+    for sep in [": ", "> ", " : ", " > "] {
+        if let Some(pos) = text.find(sep) {
+            let candidate = text[..pos].trim();
+            if is_valid_sender_name(candidate) {
+                return Some(candidate.to_string());
+            }
+        }
+    }
+
+    // Format [Nom]
+    if let Some(stripped) = text.strip_prefix('[')
+        && let Some(end) = stripped.find("] ")
+    {
+        let candidate = stripped[..end].trim();
+        if is_valid_sender_name(candidate) {
+            return Some(candidate.to_string());
+        }
+    }
+
+    None
+}
+
+fn is_valid_sender_name(s: &str) -> bool {
+    !s.is_empty()
+        && s.chars().count() <= 32
+        && s.chars().all(|c| {
+            c.is_alphanumeric() || matches!(c, '_' | '-' | '.' | ' ' | '\'' | 'é' | 'è' | 'à')
+        })
+}
+
 /// Dérive le PSK 16 octets d'un hashtag room à partir de son nom.
 /// Convention MeshCore : `PSK = SHA256("#roomname")[:16]`.
 /// Les canaux commençant par `#` sont des hashtag rooms publics : tout le monde

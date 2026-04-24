@@ -398,10 +398,30 @@ impl App {
             Action::ChatInputChar(c) => {
                 use tui_input::InputRequest;
                 self.chat_ui.input.handle(InputRequest::InsertChar(c));
+                // Si popup @mention ouvert, la query s'étend au fur et à mesure
+                if self.chat_ui.mention.is_some() {
+                    if let Some(m) = self.chat_ui.mention.as_mut() {
+                        m.query.push(c);
+                        m.selected = 0;
+                    }
+                } else if c == '@' {
+                    // Ouverture : uniquement sur un canal + précédé d'espace/début
+                    self.maybe_open_mention_popup();
+                }
             }
             Action::ChatInputBackspace => {
                 use tui_input::InputRequest;
                 self.chat_ui.input.handle(InputRequest::DeletePrevChar);
+                // Si popup ouvert : ferme si on a supprimé le `@`, sinon raccourcit la query
+                if let Some(m) = self.chat_ui.mention.as_mut() {
+                    if m.query.is_empty() {
+                        // Backspace alors que query vide → on a supprimé le `@`, fermer
+                        self.close_mention();
+                    } else {
+                        m.query.pop();
+                        m.selected = 0;
+                    }
+                }
             }
             Action::ChatInputDelete => {
                 use tui_input::InputRequest;
@@ -429,6 +449,29 @@ impl App {
             }
             Action::ChatInputClear => {
                 self.chat_ui.input.reset();
+                self.close_mention();
+            }
+            Action::ChatMentionNext => {
+                if let Some(m) = self.chat_ui.mention.as_mut() {
+                    let len = m.filtered().len();
+                    if len > 0 {
+                        m.selected = (m.selected + 1) % len;
+                    }
+                }
+            }
+            Action::ChatMentionPrev => {
+                if let Some(m) = self.chat_ui.mention.as_mut() {
+                    let len = m.filtered().len();
+                    if len > 0 {
+                        m.selected = (m.selected + len - 1) % len;
+                    }
+                }
+            }
+            Action::ChatMentionInsert => {
+                self.insert_mention_selected();
+            }
+            Action::ChatMentionCancel => {
+                self.close_mention();
             }
             Action::ChatSend => self.chat_send_current(),
             Action::ChatScrollUp => {
@@ -1215,6 +1258,8 @@ impl App {
         self.chat_ui.scroll_offset = 0;
         self.chat_ui.focus = ChatFocus::Input;
         self.ui.focus = FocusTarget::ChatInput;
+        // Changement de conversation → fermer tout popup mention ouvert
+        self.close_mention();
         // Marquer lu
         self.chat_ui.unread.insert(id.clone(), 0);
         if let ConversationId::Channel(idx) = id.clone() {
@@ -1246,6 +1291,78 @@ impl App {
             ChatFocus::History => FocusTarget::ChatHistory,
             ChatFocus::Input => FocusTarget::ChatInput,
         };
+    }
+
+    /// Tente d'ouvrir le popup @mention après qu'un `@` a été tapé dans l'input chat.
+    /// N'ouvre que si :
+    /// - la conversation active est un canal (pas un DM, une seule personne)
+    /// - le `@` est précédé d'un espace ou est en début (évite emails, path, etc.)
+    fn maybe_open_mention_popup(&mut self) {
+        let Some(ConversationId::Channel(idx)) = self.chat_ui.active.clone() else {
+            return;
+        };
+        let cursor = self.chat_ui.input.cursor();
+        if cursor == 0 {
+            return;
+        }
+        // Position du `@` qu'on vient d'insérer (dernier caractère inséré avant cursor)
+        let at_pos = cursor - 1;
+        let value = self.chat_ui.input.value();
+        // Vérifier que le `@` est bien là (sanity check)
+        if value.chars().nth(at_pos) != Some('@') {
+            return;
+        }
+        // Caractère avant `@` doit être espace ou absent
+        if at_pos > 0 {
+            let prev = value.chars().nth(at_pos - 1);
+            if !matches!(prev, Some(' ') | Some('\t')) {
+                return;
+            }
+        }
+        self.chat_ui.mention = Some(crate::state::chat::MentionState {
+            start_pos: at_pos,
+            query: String::new(),
+            candidates: Vec::new(),
+            selected: 0,
+        });
+        self.ui.mention_open = true;
+        messaging_actions::load_channel_senders(
+            self.service.clone(),
+            idx,
+            self.action_tx.clone(),
+        );
+    }
+
+    fn close_mention(&mut self) {
+        self.chat_ui.mention = None;
+        self.ui.mention_open = false;
+    }
+
+    /// Remplace `@query` par `@nom ` dans l'input et ferme le popup.
+    fn insert_mention_selected(&mut self) {
+        let Some(m) = self.chat_ui.mention.as_ref() else {
+            return;
+        };
+        let filtered = m.filtered();
+        let Some(chosen) = filtered.get(m.selected).map(|s| (*s).clone()) else {
+            self.close_mention();
+            return;
+        };
+        let start_pos = m.start_pos;
+        let query_len = m.query.chars().count();
+
+        // Reconstruction : value[0..start_pos] + "@" + chosen + " " + value[cursor..]
+        let value = self.chat_ui.input.value().to_string();
+        let chars: Vec<char> = value.chars().collect();
+        let before: String = chars.iter().take(start_pos).collect();
+        let after: String = chars.iter().skip(start_pos + 1 + query_len).collect();
+        let replacement = format!("@{} ", chosen);
+        let new_value = format!("{}{}{}", before, replacement, after);
+
+        self.chat_ui.input = tui_input::Input::default()
+            .with_value(new_value.clone())
+            .with_cursor(before.chars().count() + replacement.chars().count());
+        self.close_mention();
     }
 
     fn chat_send_current(&mut self) {
@@ -1829,11 +1946,20 @@ impl App {
                     text.len(),
                     text
                 );
+                // Le protocole MeshCore ne transmet pas le nom d'expéditeur sur les canaux
+                // (sender_name est toujours vide). Par convention, les utilisateurs préfixent
+                // leur message avec leur nom (« Alice: ... »). On l'extrait pour remplir la
+                // colonne sender_name afin que l'autocomplétion @mention fonctionne.
+                let effective_sender = if !sender_name.is_empty() {
+                    sender_name.clone()
+                } else {
+                    crate::util::format::extract_sender_name(&text).unwrap_or_default()
+                };
                 let msg = meshcore_storage::models::StoredMessage {
                     id: uuid::Uuid::new_v4().to_string(),
                     direction: "incoming".to_string(),
                     sender_pubkey: None,
-                    sender_name: sender_name.clone(),
+                    sender_name: effective_sender,
                     recipient_pubkey: None,
                     channel_idx: Some(channel_idx),
                     text: text.clone(),
@@ -2069,6 +2195,16 @@ impl App {
             }
             AsyncResult::DmPubkeysLoaded(list) => {
                 self.dm_pubkeys = list;
+            }
+            AsyncResult::ChannelSenderNamesLoaded { channel_idx, names } => {
+                // Le popup n'est peuplé que si la mention concerne toujours ce canal
+                if let Some(m) = self.chat_ui.mention.as_mut()
+                    && let Some(ConversationId::Channel(idx)) = self.chat_ui.active
+                    && idx == channel_idx
+                {
+                    m.candidates = names;
+                    m.selected = 0;
+                }
             }
             AsyncResult::ChannelsReloaded(list) => {
                 self.channels = list;

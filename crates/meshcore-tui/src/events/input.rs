@@ -179,6 +179,20 @@ fn map_tab_key(key: KeyEvent, ui: &AppUiState) -> Action {
         return Action::GotoTab(tab);
     }
 
+    // Si le popup @mention est ouvert, les touches Tab / ↑ / ↓ / Enter / Esc sont routées
+    // vers la navigation du popup, pas vers les bindings globaux ni vers ChatSend
+    if ui.mention_open && matches!(ui.focus, crate::state::FocusTarget::ChatInput) {
+        match key.code {
+            KeyCode::Tab | KeyCode::BackTab | KeyCode::Enter => {
+                return Action::ChatMentionInsert;
+            }
+            KeyCode::Up => return Action::ChatMentionPrev,
+            KeyCode::Down => return Action::ChatMentionNext,
+            KeyCode::Esc => return Action::ChatMentionCancel,
+            _ => {}
+        }
+    }
+
     // Touches F1..F5 toujours actives (peuvent être capturées par certains terminaux)
     match key.code {
         KeyCode::F(1) => return Action::GotoTab(Tab::Connection),
@@ -252,8 +266,14 @@ fn map_chat_key(key: KeyEvent, ui: &AppUiState) -> Action {
                     _ => Action::NoOp,
                 };
             }
+            // Si le popup @mention est ouvert, Up/Down/Enter/Tab/Esc sont interceptés
+            // pour naviguer dans les candidats (l'app check ce flag côté dispatch)
             match key.code {
+                KeyCode::Up => Action::ChatMentionPrev,
+                KeyCode::Down => Action::ChatMentionNext,
+                KeyCode::Tab => Action::ChatMentionInsert,
                 KeyCode::Enter => Action::ChatSend,
+                KeyCode::Esc => Action::ChatMentionCancel,
                 KeyCode::Backspace => Action::ChatInputBackspace,
                 KeyCode::Delete => Action::ChatInputDelete,
                 KeyCode::Left => Action::ChatInputLeft,
@@ -261,7 +281,6 @@ fn map_chat_key(key: KeyEvent, ui: &AppUiState) -> Action {
                 KeyCode::Home => Action::ChatInputHome,
                 KeyCode::End => Action::ChatInputEnd,
                 KeyCode::Char(c) => Action::ChatInputChar(c),
-                KeyCode::Esc => Action::FocusPrev,
                 _ => Action::NoOp,
             }
         }

@@ -40,6 +40,35 @@ pub struct ChatUiState {
     pub focus: ChatFocus,
     /// Messages non lus par conversation (calcul client-side pour DM, read de channel.unread_count sinon)
     pub unread: HashMap<ConversationId, u32>,
+    /// État du popup d'autocomplétion `@mention` (None si fermé)
+    pub mention: Option<MentionState>,
+}
+
+/// État du popup d'autocomplétion @mention. Ouvert quand l'utilisateur tape `@`
+/// en début de mot, fermé sur Esc / Enter / Backspace au début.
+pub struct MentionState {
+    /// Index (en caractères) du `@` dans la valeur de l'input
+    pub start_pos: usize,
+    /// Filtre tapé après le `@` (en lowercase pour comparaison)
+    pub query: String,
+    /// Liste complète des candidats chargés depuis la DB
+    pub candidates: Vec<String>,
+    /// Index sélectionné dans la liste filtrée
+    pub selected: usize,
+}
+
+impl MentionState {
+    /// Retourne les candidats filtrés par la query actuelle
+    pub fn filtered(&self) -> Vec<&String> {
+        if self.query.is_empty() {
+            return self.candidates.iter().collect();
+        }
+        let q = self.query.to_lowercase();
+        self.candidates
+            .iter()
+            .filter(|name| name.to_lowercase().contains(&q))
+            .collect()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,6 +89,7 @@ impl ChatUiState {
             scroll_offset: 0,
             focus: ChatFocus::List,
             unread: HashMap::new(),
+            mention: None,
         }
     }
 

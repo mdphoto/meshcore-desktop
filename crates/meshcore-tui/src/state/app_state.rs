@@ -82,6 +82,9 @@ pub struct AppUiState {
     pub channel_edit_field: u8,
     /// PSK hex du canal en cours d'édition (read-only, affiché pour copie)
     pub channel_edit_psk_hex: String,
+    /// True si le popup @mention est ouvert (miroir de `chat_ui.mention.is_some()`,
+    /// dupliqué ici pour que events/input.rs intercepte Tab/Up/Down avant les bindings globaux)
+    pub mention_open: bool,
     // Création d'un nouveau canal
     pub channel_new_name: String,
     /// PSK 32 caractères hex = 16 octets (affiché en hex pour lisibilité)
@@ -121,6 +124,7 @@ impl AppUiState {
             channel_edit_scope: String::new(),
             channel_edit_field: 0,
             channel_edit_psk_hex: String::new(),
+            mention_open: false,
             channel_new_name: String::new(),
             channel_new_psk_hex: String::new(),
             channel_new_field: 0,

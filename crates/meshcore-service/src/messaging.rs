@@ -120,3 +120,28 @@ pub fn get_dm_pubkeys(state: &AppState) -> Result<Vec<String>, String> {
         .with_conn(messages::get_dm_contact_pubkeys)
         .map_err(|e| e.to_string())
 }
+
+/// Retourne les noms distincts des expéditeurs d'un canal (pour autocomplétion @mention).
+pub fn get_channel_sender_names(
+    state: &AppState,
+    channel_idx: u8,
+    limit: u32,
+) -> Result<Vec<String>, String> {
+    state
+        .db
+        .with_conn(|c| messages::get_channel_sender_names(c, channel_idx, limit))
+        .map_err(|e| e.to_string())
+}
+
+/// Retourne les texts des messages entrants d'un canal (pour extraire les noms
+/// depuis les préfixes « Alice: … » quand `sender_name` n'est pas rempli).
+pub fn get_channel_incoming_texts(
+    state: &AppState,
+    channel_idx: u8,
+    limit: u32,
+) -> Result<Vec<String>, String> {
+    state
+        .db
+        .with_conn(|c| messages::get_channel_incoming_texts(c, channel_idx, limit))
+        .map_err(|e| e.to_string())
+}

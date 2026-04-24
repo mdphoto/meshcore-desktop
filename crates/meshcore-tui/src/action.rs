@@ -96,6 +96,10 @@ pub enum AsyncResult {
     ConnectionsListed(Vec<ConnectionInfo>),
     ChannelsReloaded(Vec<meshcore_storage::channels::StoredChannel>),
     DmPubkeysLoaded(Vec<String>),
+    ChannelSenderNamesLoaded {
+        channel_idx: u8,
+        names: Vec<String>,
+    },
     MessagesLoaded {
         conversation: crate::state::chat::ConversationId,
         messages: Vec<meshcore_storage::models::StoredMessage>,
@@ -187,6 +191,13 @@ pub enum Action {
     ChatInputEnd,
     ChatInputDeletePrevWord,
     ChatInputClear,
+    /// Navigation dans le popup @mention (si ouvert)
+    ChatMentionNext,
+    ChatMentionPrev,
+    /// Insère le candidat sélectionné dans l'input et ferme le popup
+    ChatMentionInsert,
+    /// Ferme le popup sans modifier l'input (retire le `@` et la query saisis)
+    ChatMentionCancel,
     ChatSend,
     ChatScrollUp,
     ChatScrollDown,
