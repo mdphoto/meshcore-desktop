@@ -311,6 +311,7 @@ impl App {
                 }
                 _ = tick.tick() => {
                     self.ui.prune_toasts();
+                    self.tick_receiving();
                 }
             }
 
@@ -921,6 +922,47 @@ impl App {
         }
     }
 
+    /// Appelé à chaque tick (150 ms). Termine l'état « réception en cours » si aucun message
+    /// n'est arrivé depuis 5 secondes, et émet un toast récapitulatif + reload final.
+    fn tick_receiving(&mut self) {
+        if !self.ui.receiving_messages {
+            return;
+        }
+        const IDLE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+        let Some(last) = self.ui.last_message_received_at else {
+            return;
+        };
+        if last.elapsed() < IDLE_TIMEOUT {
+            return;
+        }
+        let count = self.ui.messages_received_count;
+        let duration = self
+            .ui
+            .receiving_messages_since
+            .map(|t| t.elapsed().as_secs())
+            .unwrap_or(0);
+        self.ui.receiving_messages = false;
+        self.ui.receiving_messages_since = None;
+        if count > 0 {
+            self.ui.toast(
+                format!("{} message(s) récupéré(s) en {}s", count, duration),
+                ToastLevel::Success,
+            );
+            // Reload final de la conversation active pour voir tous les messages
+            if let Some(id) = self.chat_ui.active.clone() {
+                messaging_actions::load_messages(
+                    self.service.clone(),
+                    id,
+                    0,
+                    false,
+                    self.action_tx.clone(),
+                );
+            }
+            // Recharger aussi les canaux pour mettre à jour les unread_count
+            channel_actions::reload(self.service.clone(), self.action_tx.clone());
+        }
+    }
+
     fn start_contacts_sync(&mut self) {
         self.ui.contacts_syncing = true;
         self.ui.contacts_sync_started_at = Some(std::time::Instant::now());
@@ -1434,6 +1476,13 @@ impl App {
                 // Recharger les canaux : le service les a rafraîchis depuis le device
                 // pendant le handshake (get_channel 0..8) → l'UI doit les relire en DB
                 channel_actions::reload(self.service.clone(), self.action_tx.clone());
+                // Activer l'indicateur de réception — le device va vider sa file d'attente
+                // de messages via mc.start_auto_message_fetching() (potentiellement plusieurs
+                // minutes en BLE multi-hop)
+                self.ui.receiving_messages = true;
+                self.ui.receiving_messages_since = Some(std::time::Instant::now());
+                self.ui.last_message_received_at = Some(std::time::Instant::now());
+                self.ui.messages_received_count = 0;
                 // Auto-sync des contacts dès la connexion établie
                 if !self.ui.contacts_syncing {
                     self.start_contacts_sync();
@@ -1498,23 +1547,32 @@ impl App {
                     Err(e) => tracing::error!("tui: DM INSERT FAILED : {}", e),
                 }
 
+                // Maj de l'indicateur de réception
+                self.ui.last_message_received_at = Some(std::time::Instant::now());
+                self.ui.messages_received_count = self.ui.messages_received_count.saturating_add(1);
+
                 let id = ConversationId::Dm(sender_pubkey);
                 if self.chat_ui.active.as_ref() != Some(&id) {
                     *self.chat_ui.unread.entry(id.clone()).or_insert(0) += 1;
-                    if !matches!(self.ui.current_tab, Tab::Chat) {
+                    // Toast uniquement si on n'est pas en plein rattrapage (sinon spam)
+                    if !self.ui.receiving_messages && !matches!(self.ui.current_tab, Tab::Chat) {
                         self.ui.toast(
                             "Nouveau message — tab Chat",
                             ToastLevel::Info,
                         );
                     }
                 }
-                messaging_actions::load_messages(
-                    self.service.clone(),
-                    id,
-                    0,
-                    false,
-                    self.action_tx.clone(),
-                );
+                // Pendant le rattrapage, on évite de recharger à chaque message (gaspillage DB)
+                // sauf si c'est la conversation active
+                if self.chat_ui.active.as_ref() == Some(&id) || !self.ui.receiving_messages {
+                    messaging_actions::load_messages(
+                        self.service.clone(),
+                        id,
+                        0,
+                        false,
+                        self.action_tx.clone(),
+                    );
+                }
             }
             AppEvent::ChannelMessageReceived {
                 channel_idx,
@@ -1562,6 +1620,10 @@ impl App {
                     ),
                 }
 
+                // Maj de l'indicateur de réception
+                self.ui.last_message_received_at = Some(std::time::Instant::now());
+                self.ui.messages_received_count = self.ui.messages_received_count.saturating_add(1);
+
                 let id = ConversationId::Channel(channel_idx);
                 if self.chat_ui.active.as_ref() != Some(&id) {
                     if let Some(ch) =
@@ -1569,20 +1631,22 @@ impl App {
                     {
                         ch.unread_count += 1;
                     }
-                    if !matches!(self.ui.current_tab, Tab::Chat) {
+                    if !self.ui.receiving_messages && !matches!(self.ui.current_tab, Tab::Chat) {
                         self.ui.toast(
                             format!("Nouveau message sur canal #{}", channel_idx),
                             ToastLevel::Info,
                         );
                     }
                 }
-                messaging_actions::load_messages(
-                    self.service.clone(),
-                    id,
-                    0,
-                    false,
-                    self.action_tx.clone(),
-                );
+                if self.chat_ui.active.as_ref() == Some(&id) || !self.ui.receiving_messages {
+                    messaging_actions::load_messages(
+                        self.service.clone(),
+                        id,
+                        0,
+                        false,
+                        self.action_tx.clone(),
+                    );
+                }
             }
             AppEvent::MessageSent { .. } => {
                 // Reload de la conversation active (statut passe pending→sent)

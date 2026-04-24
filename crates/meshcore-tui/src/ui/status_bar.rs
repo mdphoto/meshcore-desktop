@@ -33,6 +33,25 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         spans.push(Span::raw(format!("Bat {}% ", batt)));
     }
 
+    // Indicateur « récupération des messages en cours »
+    if app.ui.receiving_messages {
+        let elapsed = app
+            .ui
+            .receiving_messages_since
+            .map(|t| t.elapsed().as_secs())
+            .unwrap_or(0);
+        spans.push(Span::styled("│ ", theme::dim()));
+        spans.push(Span::styled(
+            format!(
+                "{} msg: {} ({}s) ",
+                crate::util::format::spinner_frame(),
+                app.ui.messages_received_count,
+                elapsed
+            ),
+            theme::warn_style(),
+        ));
+    }
+
     spans.push(Span::styled("│ ", theme::dim()));
     spans.push(Span::raw(format!(
         "{} ",

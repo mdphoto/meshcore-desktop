@@ -68,6 +68,12 @@ pub struct AppUiState {
     pub contacts_collapsed_groups: HashSet<u8>,
     pub contacts_syncing: bool,
     pub contacts_sync_started_at: Option<Instant>,
+    /// Réception de messages en cours (file d'attente du device se vide via auto-fetching).
+    /// Set à `true` sur AppEvent::Connected, reset ~5s après le dernier message reçu.
+    pub receiving_messages: bool,
+    pub receiving_messages_since: Option<Instant>,
+    pub last_message_received_at: Option<Instant>,
+    pub messages_received_count: u32,
     // Édition de canal en cours
     pub channel_edit_name: String,
     pub channel_edit_notifications: bool,
@@ -98,6 +104,10 @@ impl AppUiState {
             contacts_collapsed_groups: HashSet::new(),
             contacts_syncing: false,
             contacts_sync_started_at: None,
+            receiving_messages: false,
+            receiving_messages_since: None,
+            last_message_received_at: None,
+            messages_received_count: 0,
             channel_edit_name: String::new(),
             channel_edit_notifications: true,
             channel_edit_scope: String::new(),
