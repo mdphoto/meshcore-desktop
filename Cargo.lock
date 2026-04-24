@@ -2765,79 +2765,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "meshcore-app"
-version = "0.3.3"
-dependencies = [
- "btleplug",
- "chrono",
- "meshcore-protocol",
- "meshcore-rs",
- "meshcore-service",
- "meshcore-storage",
- "meshcore-transport",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-deep-link",
- "tauri-plugin-notification",
- "tokio",
- "tokio-serial",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
-name = "meshcore-cli"
-version = "0.3.3"
-dependencies = [
- "anyhow",
- "chrono",
- "clap",
- "colored",
- "dirs",
- "meshcore-protocol",
- "meshcore-service",
- "meshcore-storage",
- "meshcore-transport",
- "meshcore-tui",
- "rustyline",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "meshcore-crypto"
-version = "0.3.3"
-dependencies = [
- "aes",
- "cipher",
- "ed25519-dalek",
- "hex",
- "hmac",
- "rand 0.8.5",
- "sha2",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "meshcore-protocol"
-version = "0.3.3"
-dependencies = [
- "byteorder",
- "bytes",
- "chrono",
- "meshcore-rs",
- "serde",
- "smaz",
- "thiserror 2.0.18",
-]
-
-[[package]]
 name = "meshcore-rs"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2855,17 +2782,90 @@ dependencies = [
 ]
 
 [[package]]
-name = "meshcore-service"
-version = "0.3.3"
+name = "meshcorex-app"
+version = "0.4.0"
+dependencies = [
+ "btleplug",
+ "chrono",
+ "meshcore-rs",
+ "meshcorex-protocol",
+ "meshcorex-service",
+ "meshcorex-storage",
+ "meshcorex-transport",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-deep-link",
+ "tauri-plugin-notification",
+ "tokio",
+ "tokio-serial",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
+name = "meshcorex-cli"
+version = "0.4.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "clap",
+ "colored",
+ "dirs",
+ "meshcorex-protocol",
+ "meshcorex-service",
+ "meshcorex-storage",
+ "meshcorex-transport",
+ "meshcorex-tui",
+ "rustyline",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "meshcorex-crypto"
+version = "0.4.0"
+dependencies = [
+ "aes",
+ "cipher",
+ "ed25519-dalek",
+ "hex",
+ "hmac",
+ "rand 0.8.5",
+ "sha2",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "meshcorex-protocol"
+version = "0.4.0"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "chrono",
+ "meshcore-rs",
+ "serde",
+ "smaz",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "meshcorex-service"
+version = "0.4.0"
 dependencies = [
  "async-trait",
  "chrono",
  "flate2",
- "meshcore-crypto",
- "meshcore-protocol",
  "meshcore-rs",
- "meshcore-storage",
- "meshcore-transport",
+ "meshcorex-crypto",
+ "meshcorex-protocol",
+ "meshcorex-storage",
+ "meshcorex-transport",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
@@ -2876,8 +2876,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "meshcore-storage"
-version = "0.3.3"
+name = "meshcorex-storage"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "rusqlite",
@@ -2889,11 +2889,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "meshcore-transport"
-version = "0.3.3"
+name = "meshcorex-transport"
+version = "0.4.0"
 dependencies = [
  "async-trait",
  "backoff",
+ "bluez-async",
  "btleplug",
  "bytes",
  "meshcore-rs",
@@ -2904,8 +2905,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "meshcore-tui"
-version = "0.3.3"
+name = "meshcorex-tui"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "btleplug",
@@ -2914,10 +2915,10 @@ dependencies = [
  "crossterm",
  "dirs",
  "futures",
- "meshcore-protocol",
- "meshcore-service",
- "meshcore-storage",
- "meshcore-transport",
+ "meshcorex-protocol",
+ "meshcorex-service",
+ "meshcorex-storage",
+ "meshcorex-transport",
  "rand 0.8.5",
  "ratatui",
  "sha2",

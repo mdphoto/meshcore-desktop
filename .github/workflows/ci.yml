@@ -11,7 +11,7 @@ env:
 
 jobs:
   # Vérifie le binaire unifié meshcore (TUI + CLI) sur les 3 OS natifs.
-  # Exclut meshcore-app (Tauri GUI) — testé séparément par le job `gui-check` si besoin.
+  # Exclut meshcorex-app (Tauri GUI) — testé séparément par le job `gui-check` si besoin.
   rust:
     name: Rust (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -44,10 +44,10 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Clippy (sans GUI Tauri)
-        run: cargo clippy --workspace --exclude meshcore-app -- -D warnings
+        run: cargo clippy --workspace --exclude meshcorex-app -- -D warnings
 
       - name: Tests (sans GUI Tauri)
-        run: cargo test --workspace --exclude meshcore-app
+        run: cargo test --workspace --exclude meshcorex-app
 
   # Vérifie que le frontend React build toujours (utile si un jour on ressort la GUI).
   # Tourne en parallèle de `rust`, non bloquant sur le PR principal.

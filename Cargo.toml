@@ -1,18 +1,18 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/meshcore-protocol",
-    "crates/meshcore-crypto",
-    "crates/meshcore-transport",
-    "crates/meshcore-storage",
-    "crates/meshcore-service",
-    "crates/meshcore-app",
-    "crates/meshcore-cli",
-    "crates/meshcore-tui",
+    "crates/meshcorex-protocol",
+    "crates/meshcorex-crypto",
+    "crates/meshcorex-transport",
+    "crates/meshcorex-storage",
+    "crates/meshcorex-service",
+    "crates/meshcorex-app",
+    "crates/meshcorex-cli",
+    "crates/meshcorex-tui",
 ]
 
 [workspace.package]
-version = "0.3.3"
+version = "0.4.0"
 edition = "2024"
 license = "MIT"
 authors = ["Michel Dessenne"]

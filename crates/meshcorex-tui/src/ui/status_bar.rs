@@ -1,0 +1,94 @@
+use crate::app::App;
+use crate::theme;
+use crate::util::i18n::t;
+use chrono::Local;
+use ratatui::{
+    Frame,
+    layout::{Alignment, Rect},
+    style::Style,
+    text::{Line, Span},
+    widgets::{Block, Borders, Paragraph},
+};
+
+pub fn render(frame: &mut Frame, area: Rect, app: &App) {
+    let mut spans: Vec<Span> = Vec::new();
+
+    if app.ui.connected {
+        spans.push(Span::styled(" ● ", theme::ok_style()));
+        if let Some(name) = &app.ui.device_name {
+            spans.push(Span::raw(format!("{} ", name)));
+        } else {
+            spans.push(Span::raw(format!("{} ", t("status.connected"))));
+        }
+    } else {
+        spans.push(Span::styled(" ○ ", theme::err_style()));
+        spans.push(Span::raw(format!("{} ", t("status.disconnected"))));
+    }
+
+    if let Some(rssi) = app.ui.last_rssi {
+        spans.push(Span::styled("│ ", theme::dim()));
+        spans.push(Span::raw(format!("RSSI {} dBm ", rssi)));
+    }
+    if let Some(batt) = app.ui.battery_percent {
+        spans.push(Span::styled("│ ", theme::dim()));
+        spans.push(Span::raw(format!("{} {}% ", t("statusbar.battery"), batt)));
+    }
+
+    // Indicateur « récupération des messages en cours »
+    if app.ui.receiving_messages {
+        let elapsed = app
+            .ui
+            .receiving_messages_since
+            .map(|t| t.elapsed().as_secs())
+            .unwrap_or(0);
+        spans.push(Span::styled("│ ", theme::dim()));
+        spans.push(Span::styled(
+            format!(
+                "{} msg: {} ({}s) ",
+                crate::util::format::spinner_frame(),
+                app.ui.messages_received_count,
+                elapsed
+            ),
+            theme::warn_style(),
+        ));
+    }
+
+    // Indicateur « login room server en cours »
+    if let Some((_, name, since)) = &app.ui.room_login_pending {
+        let elapsed = since.elapsed().as_secs();
+        spans.push(Span::styled("│ ", theme::dim()));
+        spans.push(Span::styled(
+            format!(
+                "{} login {} ({}s) ",
+                crate::util::format::spinner_frame(),
+                crate::util::unicode::truncate(name, 16),
+                elapsed
+            ),
+            theme::warn_style(),
+        ));
+    }
+
+    spans.push(Span::styled("│ ", theme::dim()));
+    spans.push(Span::raw(format!(
+        "{} ",
+        Local::now().format("%H:%M:%S")
+    )));
+
+    spans.push(Span::styled("│ ", theme::dim()));
+    spans.push(Span::styled("?", theme::title()));
+    spans.push(Span::raw(format!(" {} ", t("statusbar.help"))));
+    spans.push(Span::styled("q", theme::title()));
+    spans.push(Span::raw(format!(" {}", t("statusbar.quit"))));
+
+    let line = Line::from(spans);
+    let block = Block::default()
+        .borders(Borders::TOP)
+        .border_style(theme::dim());
+    frame.render_widget(
+        Paragraph::new(line)
+            .block(block)
+            .alignment(Alignment::Left)
+            .style(Style::default()),
+        area,
+    );
+}

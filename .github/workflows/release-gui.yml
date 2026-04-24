@@ -28,16 +28,16 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            cli_name: meshcore-cli
+            cli_name: meshcorex-cli
           - target: x86_64-pc-windows-msvc
             os: windows-latest
-            cli_name: meshcore-cli.exe
+            cli_name: meshcorex-cli.exe
           - target: x86_64-apple-darwin
             os: macos-latest
-            cli_name: meshcore-cli
+            cli_name: meshcorex-cli
           - target: aarch64-apple-darwin
             os: macos-latest
-            cli_name: meshcore-cli
+            cli_name: meshcorex-cli
 
     steps:
       - uses: actions/checkout@v4
@@ -83,7 +83,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ""
 
       - name: Build CLI
-        run: cargo build --release --target ${{ matrix.target }} --package meshcore-cli
+        run: cargo build --release --target ${{ matrix.target }} --package meshcorex-cli
 
       - name: Rename CLI binary
         shell: bash
@@ -92,11 +92,11 @@ jobs:
           SRC="target/${TARGET}/release/${{ matrix.cli_name }}"
           # Nommer selon la plateforme
           case "${TARGET}" in
-            x86_64-unknown-linux-gnu)   DEST="meshcore-cli_linux_x86_64" ;;
-            x86_64-pc-windows-msvc)     DEST="meshcore-cli_windows_x64.exe" ;;
-            x86_64-apple-darwin)        DEST="meshcore-cli_macos_x64" ;;
-            aarch64-apple-darwin)       DEST="meshcore-cli_macos_arm64" ;;
-            *)                          DEST="meshcore-cli_${TARGET}" ;;
+            x86_64-unknown-linux-gnu)   DEST="meshcorex-cli_linux_x86_64" ;;
+            x86_64-pc-windows-msvc)     DEST="meshcorex-cli_windows_x64.exe" ;;
+            x86_64-apple-darwin)        DEST="meshcorex-cli_macos_x64" ;;
+            aarch64-apple-darwin)       DEST="meshcorex-cli_macos_arm64" ;;
+            *)                          DEST="meshcorex-cli_${TARGET}" ;;
           esac
           cp "${SRC}" "${DEST}"
           echo "CLI_FILE=${DEST}" >> $GITHUB_ENV
@@ -109,7 +109,7 @@ jobs:
           path: |
             target/${{ matrix.target }}/release/bundle/deb/*.deb
             target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
-            meshcore-cli_linux_*
+            meshcorex-cli_linux_*
 
       - name: Upload GUI artifacts (Windows)
         if: runner.os == 'Windows'
@@ -118,7 +118,7 @@ jobs:
           name: windows-${{ matrix.target }}
           path: |
             target/${{ matrix.target }}/release/bundle/nsis/*.exe
-            meshcore-cli_windows_*
+            meshcorex-cli_windows_*
 
       - name: Upload GUI artifacts (macOS)
         if: runner.os == 'macOS'
@@ -127,7 +127,7 @@ jobs:
           name: macos-${{ matrix.target }}
           path: |
             target/${{ matrix.target }}/release/bundle/dmg/*.dmg
-            meshcore-cli_macos_*
+            meshcorex-cli_macos_*
 
   build-cli-arm64:
     name: Build CLI (ARM64 Linux - Raspberry Pi)
@@ -143,16 +143,16 @@ jobs:
           sudo apt-get install -y libdbus-1-dev pkg-config
           cargo install cross --git https://github.com/cross-rs/cross
 
-      - name: Build meshcore-cli for ARM64 via cross (Docker)
-        run: cross build --release --target aarch64-unknown-linux-gnu --package meshcore-cli
+      - name: Build meshcorex-cli for ARM64 via cross (Docker)
+        run: cross build --release --target aarch64-unknown-linux-gnu --package meshcorex-cli
 
       - name: Package ARM64 .deb
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           mkdir -p deb/DEBIAN deb/usr/bin
-          cp target/aarch64-unknown-linux-gnu/release/meshcore-cli deb/usr/bin/
+          cp target/aarch64-unknown-linux-gnu/release/meshcorex-cli deb/usr/bin/
           cat > deb/DEBIAN/control <<CTRL
-          Package: meshcore-cli
+          Package: meshcorex-cli
           Version: ${VERSION}
           Section: comm
           Priority: optional
@@ -162,18 +162,18 @@ jobs:
            Command-line tool for communicating with MeshCore devices
            via Serial, TCP or BLE. Designed for headless Raspberry Pi.
           CTRL
-          dpkg-deb --build deb meshcore-cli_${VERSION}_arm64.deb
+          dpkg-deb --build deb meshcorex-cli_${VERSION}_arm64.deb
 
       - name: Rename binary
-        run: cp target/aarch64-unknown-linux-gnu/release/meshcore-cli meshcore-cli_linux_arm64
+        run: cp target/aarch64-unknown-linux-gnu/release/meshcorex-cli meshcorex-cli_linux_arm64
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: cli-arm64
           path: |
-            meshcore-cli_*_arm64.deb
-            meshcore-cli_linux_arm64
+            meshcorex-cli_*_arm64.deb
+            meshcorex-cli_linux_arm64
 
   release:
     name: Create Release
@@ -201,7 +201,7 @@ jobs:
             artifacts/**/*.AppImage
             artifacts/**/*.exe
             artifacts/**/*.dmg
-            artifacts/**/meshcore-cli_*
+            artifacts/**/meshcorex-cli_*
           generate_release_notes: true
           draft: true
           prerelease: false

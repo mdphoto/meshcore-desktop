@@ -1,0 +1,29 @@
+[package]
+name = "meshcorex-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Binaire MeshCore unifié — TUI ratatui par défaut, sous-commandes one-shot, REPL legacy"
+
+[[bin]]
+name = "meshcorex"
+path = "src/main.rs"
+
+[dependencies]
+meshcorex-service = { path = "../meshcorex-service" }
+meshcorex-transport = { path = "../meshcorex-transport" }
+meshcorex-storage = { path = "../meshcorex-storage" }
+meshcorex-protocol = { path = "../meshcorex-protocol" }
+meshcorex-tui = { path = "../meshcorex-tui" }
+tokio = { workspace = true }
+clap = { workspace = true }
+rustyline = { workspace = true }
+colored = { workspace = true }
+dirs = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+anyhow = { workspace = true }

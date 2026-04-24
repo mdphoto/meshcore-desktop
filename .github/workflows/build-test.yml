@@ -52,15 +52,15 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ""
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
 
-      - name: Build meshcore-desktop (binaire unifié TUI+CLI)
-        run: cargo build --release --target x86_64-pc-windows-msvc --package meshcore-cli
+      - name: Build meshcorex (binaire unifié TUI+CLI)
+        run: cargo build --release --target x86_64-pc-windows-msvc --package meshcorex-cli
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: meshcore-desktop-windows-test
+          name: meshcorex-windows-test
           path: |
             target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
             target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
-            target/x86_64-pc-windows-msvc/release/meshcore-desktop.exe
+            target/x86_64-pc-windows-msvc/release/meshcorex.exe
           retention-days: 7
