@@ -85,6 +85,11 @@ pub struct AppUiState {
     /// True si le popup @mention est ouvert (miroir de `chat_ui.mention.is_some()`,
     /// dupliqué ici pour que events/input.rs intercepte Tab/Up/Down avant les bindings globaux)
     pub mention_open: bool,
+    /// Input en cours dans la modale de login à une room server
+    pub room_login_password: String,
+    /// Login room en cours : (pubkey, nom affiché, instant de départ).
+    /// Affiché comme spinner dans la status bar jusqu'à réception du RoomLoginResult.
+    pub room_login_pending: Option<(String, String, Instant)>,
     // Création d'un nouveau canal
     pub channel_new_name: String,
     /// PSK 32 caractères hex = 16 octets (affiché en hex pour lisibilité)
@@ -125,6 +130,8 @@ impl AppUiState {
             channel_edit_field: 0,
             channel_edit_psk_hex: String::new(),
             mention_open: false,
+            room_login_password: String::new(),
+            room_login_pending: None,
             channel_new_name: String::new(),
             channel_new_psk_hex: String::new(),
             channel_new_field: 0,

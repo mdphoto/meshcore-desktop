@@ -57,9 +57,40 @@ pub async fn login(state: &AppState, pubkey: &str, password: &str) -> Result<Str
         .await
         .send_login(pubkey, password)
         .await
-        .map_err(|e| format!("Login repeater échoué : {}", e))?;
-    info!("Login repeater {}", &pubkey[..12.min(pubkey.len())]);
-    Ok("Login envoyé".to_string())
+        .map_err(|e| format!("Login échoué (envoi) : {}", e))?;
+    info!("send_login envoyé à {}", &pubkey[..12.min(pubkey.len())]);
+
+    // Attente de la réponse serveur : LoginSuccess ou LoginFailed.
+    // Le payload est vide (juste un ACK protocole) — on identifie le résultat par l'EventType.
+    // Timeout 30s pour tenir compte du BLE multi-hop.
+    let success_fut = mc.wait_for_event(
+        Some(EventType::LoginSuccess),
+        HashMap::new(),
+        Duration::from_secs(30),
+    );
+    let failed_fut = mc.wait_for_event(
+        Some(EventType::LoginFailed),
+        HashMap::new(),
+        Duration::from_secs(30),
+    );
+
+    tokio::select! {
+        res = success_fut => {
+            if res.is_some() {
+                info!("LoginSuccess reçu pour {}", &pubkey[..12.min(pubkey.len())]);
+                Ok("Login réussi".to_string())
+            } else {
+                Err("Pas de réponse du serveur (timeout)".to_string())
+            }
+        }
+        res = failed_fut => {
+            if res.is_some() {
+                Err("Mot de passe incorrect".to_string())
+            } else {
+                Err("Pas de réponse du serveur (timeout)".to_string())
+            }
+        }
+    }
 }
 
 pub async fn logout(state: &AppState, pubkey: &str) -> Result<(), String> {

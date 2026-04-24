@@ -24,6 +24,7 @@ pub fn render(
     channel_new_psk_hex: &str,
     channel_new_field: u8,
     channel_new_idx: Option<u8>,
+    room_login_password: &str,
 ) {
     // Cas spécial : ChannelEdit a besoin de ses propres champs
     if let ModalKind::ChannelEdit { idx } = modal {
@@ -151,6 +152,38 @@ pub fn render(
                 ]),
             ],
         ),
+        ModalKind::RoomLogin { name, .. } => (
+            " Login Room Server ",
+            vec![
+                Line::from(""),
+                Line::from(Span::raw(format!(
+                    "  Connexion à la room « {} »",
+                    name
+                ))),
+                Line::from(""),
+                Line::from(Span::styled(
+                    "  Mot de passe (défaut guest : hello, admin : password)",
+                    theme::dim(),
+                )),
+                Line::from(vec![
+                    Span::styled(" > ", theme::title()),
+                    Span::raw("•".repeat(room_login_password.chars().count())),
+                    Span::styled("_", theme::dim()),
+                ]),
+                Line::from(""),
+                Line::from(Span::styled(
+                    "  Après login, le room renvoie les derniers messages ratés automatiquement.",
+                    theme::dim(),
+                )),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("[Enter]", theme::title()),
+                    Span::raw(" Connecter  "),
+                    Span::styled("[Esc]", theme::title()),
+                    Span::raw(" Annuler"),
+                ]),
+            ],
+        ),
         ModalKind::ConfirmReboot => (
             " Confirmer le redémarrage ",
             vec![
@@ -173,7 +206,7 @@ pub fn render(
             // Déjà géré en court-circuit en tête de fonction
             return;
         }
-        ModalKind::RepeaterAdmin { .. } => {
+        ModalKind::ContactInfo { .. } | ModalKind::RepeaterAdmin { .. } => {
             // Rendu plein-écran dans ui::mod.rs (ne doit pas arriver ici)
             return;
         }

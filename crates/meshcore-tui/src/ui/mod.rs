@@ -28,6 +28,20 @@ pub fn render(frame: &mut Frame, app: &App) {
         // RepeaterAdmin est plein-écran (pas centré)
         if let crate::action::ModalKind::RepeaterAdmin { pubkey, name } = modal {
             widgets::repeater_modal::render(frame, frame.area(), app, pubkey, name);
+        } else if let crate::action::ModalKind::ContactInfo { pubkey } = modal {
+            if let Some(contact) = app.contacts.iter().find(|c| c.public_key == *pubkey) {
+                let extra_hints: Vec<&str> = match contact.node_type {
+                    2 => vec!["Repeater : tab 2 → R pour admin CLI"],
+                    3 => vec!["Room server : tab 3 → Enter dans la liste pour rejoindre"],
+                    _ => vec![],
+                };
+                widgets::contact_info::render(
+                    frame,
+                    frame.area(),
+                    contact,
+                    &extra_hints,
+                );
+            }
         } else {
             let channel_new_idx = (0u8..=7)
                 .find(|idx| !app.channels.iter().any(|c| c.idx == *idx));
@@ -47,6 +61,7 @@ pub fn render(frame: &mut Frame, app: &App) {
                 &app.ui.channel_new_psk_hex,
                 app.ui.channel_new_field,
                 channel_new_idx,
+                &app.ui.room_login_password,
             );
         }
     }

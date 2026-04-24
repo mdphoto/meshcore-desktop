@@ -123,6 +123,18 @@ fn map_modal_key(key: KeyEvent, ui: &AppUiState) -> Action {
             KeyCode::Char('-') | KeyCode::Down => Action::DeviceTxPowerDec,
             _ => Action::NoOp,
         },
+        Some(ModalKind::ContactInfo { .. }) => match key.code {
+            KeyCode::Esc | KeyCode::Enter | KeyCode::Char('q') => Action::CloseModal,
+            KeyCode::F(5) => Action::ContactsCopyPubkey,
+            _ => Action::NoOp,
+        },
+        Some(ModalKind::RoomLogin { .. }) => match key.code {
+            KeyCode::Esc => Action::CloseModal,
+            KeyCode::Enter => Action::RoomLoginSubmit,
+            KeyCode::Backspace => Action::RoomLoginBackspace,
+            KeyCode::Char(c) => Action::RoomLoginChar(c),
+            _ => Action::NoOp,
+        },
         Some(ModalKind::ConfirmReboot) => match key.code {
             KeyCode::Char('y') | KeyCode::Char('Y') | KeyCode::Enter => {
                 Action::DeviceConfirmReboot
@@ -371,6 +383,7 @@ fn map_contacts_key(key: KeyEvent, _ui: &AppUiState) -> Action {
         KeyCode::Char('d') => Action::ContactsRequestDelete,
         KeyCode::Char('r') => Action::ContactsRefresh,
         KeyCode::Char('t') => Action::ContactsCycleSort,
+        KeyCode::Char('i') => Action::ContactsRequestInfo,
         // R majuscule sur un contact repeater : ouvre la modale admin
         KeyCode::Char('R') => Action::ContactsOpenRepeater,
         KeyCode::Up => Action::Up,

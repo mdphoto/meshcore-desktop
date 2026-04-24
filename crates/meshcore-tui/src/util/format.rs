@@ -19,6 +19,89 @@ pub fn relative_time(iso: &str) -> String {
     }
 }
 
+/// Format humain d'un timestamp Unix (en secondes, stocké comme String dans la DB).
+/// Rend par exemple « il y a 3 min (2026-04-24 14:29:05) » ou « 2026-04-20 09:14:00 » si ancien.
+pub fn format_unix_timestamp(ts_str: &str) -> String {
+    let Ok(ts_secs) = ts_str.parse::<i64>() else {
+        return if ts_str.is_empty() {
+            "(inconnue)".to_string()
+        } else {
+            format!("({})", ts_str)
+        };
+    };
+    if ts_secs <= 0 {
+        return "(inconnue)".to_string();
+    }
+    let Some(utc) = DateTime::<Utc>::from_timestamp(ts_secs, 0) else {
+        return format!("ts={}", ts_secs);
+    };
+    let local: DateTime<Local> = utc.with_timezone(&Local);
+    let now = Local::now();
+    let diff = now.signed_duration_since(local);
+    let full = local.format("%Y-%m-%d %H:%M:%S").to_string();
+    let relative = if diff.num_seconds() < 60 {
+        "à l'instant".to_string()
+    } else if diff.num_minutes() < 60 {
+        format!("il y a {} min", diff.num_minutes())
+    } else if diff.num_hours() < 24 {
+        format!("il y a {} h", diff.num_hours())
+    } else if diff.num_days() < 7 {
+        format!("il y a {} j", diff.num_days())
+    } else {
+        return full;
+    };
+    format!("{} ({})", relative, full)
+}
+
+/// Formate `path_len` (i8) en texte humain :
+/// - -1 → « flood (pas de chemin direct connu) »
+/// -  0 → « direct »
+/// -  N → « N hop(s) »
+pub fn format_path_len(path_len: i8) -> String {
+    match path_len {
+        -1 => "flood (pas de chemin direct connu)".to_string(),
+        0 => "direct (0 hop)".to_string(),
+        n if n > 0 => format!("{} hop(s)", n),
+        other => format!("inconnu ({})", other),
+    }
+}
+
+/// Décode les bits du flags MeshCore en liste de labels. Bits inconnus affichés en numéro.
+/// Référence : les flags MeshCore exposent quelques bits (GPS connu, signé, etc.) mais la
+/// liste complète dépend du firmware — on affiche ce qui est raisonnablement documenté.
+pub fn format_contact_flags(flags: u8) -> String {
+    if flags == 0 {
+        return "aucun (0x00)".to_string();
+    }
+    let mut labels: Vec<String> = Vec::new();
+    // Bits usuels observés dans meshcore-rs / MeshCore firmware :
+    if flags & 0x01 != 0 {
+        labels.push("position connue".to_string());
+    }
+    if flags & 0x02 != 0 {
+        labels.push("signé".to_string());
+    }
+    if flags & 0x04 != 0 {
+        labels.push("bit2".to_string());
+    }
+    if flags & 0x08 != 0 {
+        labels.push("bit3".to_string());
+    }
+    if flags & 0x10 != 0 {
+        labels.push("bit4".to_string());
+    }
+    if flags & 0x20 != 0 {
+        labels.push("bit5".to_string());
+    }
+    if flags & 0x40 != 0 {
+        labels.push("bit6".to_string());
+    }
+    if flags & 0x80 != 0 {
+        labels.push("bit7".to_string());
+    }
+    format!("0x{:02x} ({}, binaire 0b{:08b})", flags, labels.join(", "), flags)
+}
+
 pub fn node_type_label(node_type: u8) -> &'static str {
     match node_type {
         1 => "client",
@@ -133,12 +216,40 @@ pub fn extract_sender_name(text: &str) -> Option<String> {
     None
 }
 
+/// Retire le préfixe « Nom: »/« Nom> »/« [Nom] » du texte quand il correspond au
+/// `sender_name` fourni. Évite d'afficher « Alice: Alice: coucou » au rendu quand
+/// on a déjà extrait le nom dans la colonne sender_name de la DB.
+pub fn strip_sender_prefix<'a>(text: &'a str, sender_name: &str) -> &'a str {
+    if sender_name.is_empty() {
+        return text;
+    }
+    let trimmed = text.trim_start();
+    for sep in [": ", "> ", " : ", " > "] {
+        let prefix = format!("{}{}", sender_name, sep);
+        if let Some(rest) = trimmed.strip_prefix(prefix.as_str()) {
+            return rest;
+        }
+    }
+    let bracket = format!("[{}] ", sender_name);
+    if let Some(rest) = trimmed.strip_prefix(bracket.as_str()) {
+        return rest;
+    }
+    text
+}
+
 fn is_valid_sender_name(s: &str) -> bool {
-    !s.is_empty()
-        && s.chars().count() <= 32
-        && s.chars().all(|c| {
-            c.is_alphanumeric() || matches!(c, '_' | '-' | '.' | ' ' | '\'' | 'é' | 'è' | 'à')
-        })
+    let s = s.trim();
+    if s.is_empty() {
+        return false;
+    }
+    // Limite : 1..=40 graphèmes raisonnables. Accepte emojis, accents, symboles.
+    let len = s.chars().count();
+    if !(1..=40).contains(&len) {
+        return false;
+    }
+    // Rejette uniquement les séparateurs utilisés pour le parsing + control chars
+    !s.chars()
+        .any(|c| c.is_control() || matches!(c, ':' | '>' | '\n' | '\r' | '\t'))
 }
 
 /// Dérive le PSK 16 octets d'un hashtag room à partir de son nom.

@@ -52,6 +52,21 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         ));
     }
 
+    // Indicateur « login room server en cours »
+    if let Some((_, name, since)) = &app.ui.room_login_pending {
+        let elapsed = since.elapsed().as_secs();
+        spans.push(Span::styled("│ ", theme::dim()));
+        spans.push(Span::styled(
+            format!(
+                "{} login {} ({}s) ",
+                crate::util::format::spinner_frame(),
+                crate::util::unicode::truncate(name, 16),
+                elapsed
+            ),
+            theme::warn_style(),
+        ));
+    }
+
     spans.push(Span::styled("│ ", theme::dim()));
     spans.push(Span::raw(format!(
         "{} ",

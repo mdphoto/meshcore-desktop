@@ -152,6 +152,10 @@ pub struct App {
     /// Chargé depuis la DB au démarrage et après chaque Connected/réception — permet
     /// de lister dans la tab Chat les conversations existantes sans clic préalable.
     pub dm_pubkeys: Vec<String>,
+    /// Pubkeys des room servers auxquels on s'est loggé durant cette session.
+    /// Évite de redemander le mot de passe à chaque visite.
+    /// Reset sur AppEvent::Disconnected.
+    pub rooms_logged_in: std::collections::HashSet<String>,
     pub action_tx: UnboundedSender<Action>,
     pub auto_reconnect_on_startup: bool,
 }
@@ -178,6 +182,7 @@ impl App {
             channels_list_state,
             channel_scopes: std::collections::HashMap::new(),
             dm_pubkeys: Vec::new(),
+            rooms_logged_in: std::collections::HashSet::new(),
             action_tx,
             auto_reconnect_on_startup: false,
         }
@@ -486,6 +491,35 @@ impl App {
                 contact_actions::reload(self.service.clone(), self.action_tx.clone());
             }
             Action::ChatOpenContact(pk) => self.chat_activate(ConversationId::Dm(pk)),
+            Action::RoomLoginChar(c) => {
+                self.ui.room_login_password.push(c);
+            }
+            Action::RoomLoginBackspace => {
+                self.ui.room_login_password.pop();
+            }
+            Action::RoomLoginSubmit => {
+                if let Some(ModalKind::RoomLogin { pubkey, name }) =
+                    self.ui.top_modal().cloned()
+                {
+                    let password = self.ui.room_login_password.clone();
+                    self.ui.pop_modal();
+                    self.ui.room_login_pending = Some((
+                        pubkey.clone(),
+                        name.clone(),
+                        std::time::Instant::now(),
+                    ));
+                    repeater_actions::spawn_room_login(
+                        self.service.clone(),
+                        pubkey.clone(),
+                        password,
+                        self.action_tx.clone(),
+                    );
+                    // Activation provisoire pour que la conv soit visible pendant l'attente
+                    // (le marquage loggé définitif se fait sur RoomLoginResult Ok)
+                    self.rooms_logged_in.insert(pubkey.clone());
+                    self.chat_activate(ConversationId::Dm(pubkey));
+                }
+            }
 
             // --- Channels ---
             Action::ChannelsRefresh => {
@@ -973,6 +1007,29 @@ impl App {
                 }
             }
 
+            Action::ContactsRequestInfo => {
+                if let Some(c) = self.selected_contact().cloned() {
+                    self.ui.push_modal(ModalKind::ContactInfo {
+                        pubkey: c.public_key,
+                    });
+                }
+            }
+            Action::ContactsCopyPubkey => {
+                if let Some(ModalKind::ContactInfo { pubkey }) =
+                    self.ui.top_modal().cloned()
+                {
+                    match crate::util::format::copy_to_clipboard(&pubkey) {
+                        Ok(()) => self.ui.toast(
+                            "Pubkey copiée dans le presse-papier (OSC 52)",
+                            ToastLevel::Success,
+                        ),
+                        Err(e) => self.ui.toast(
+                            format!("Échec copie : {}", e),
+                            ToastLevel::Error,
+                        ),
+                    }
+                }
+            }
             Action::ContactsCycleSort => {
                 self.ui.contacts_sort = self.ui.contacts_sort.next();
                 contact_actions::sort(&mut self.contacts, self.ui.contacts_sort);
@@ -1149,12 +1206,15 @@ impl App {
     /// Les DMs sans contact correspondant (pubkey jamais sync) sont affichés avec un
     /// fallback sur le prefix de la pubkey.
     pub fn chat_conversation_summaries(&self) -> Vec<ConversationSummary> {
+        use crate::state::chat::ConversationKind;
         use std::collections::HashSet;
 
-        let mut out: Vec<ConversationSummary> = Vec::new();
-        let mut dm_added: HashSet<String> = HashSet::new();
+        let mut channels_out: Vec<ConversationSummary> = Vec::new();
+        let mut rooms_out: Vec<ConversationSummary> = Vec::new();
+        let mut dms_out: Vec<ConversationSummary> = Vec::new();
+        let mut handled_pks: HashSet<String> = HashSet::new();
 
-        // Canaux (toujours visibles)
+        // Canaux (toujours visibles, triés par idx croissant côté render)
         for ch in &self.channels {
             let id = ConversationId::Channel(ch.idx);
             let (last, last_ts) = self
@@ -1164,23 +1224,60 @@ impl App {
                 .and_then(|msgs| msgs.last())
                 .map(|m| (Some(m.text.clone()), Some(m.timestamp.clone())))
                 .unwrap_or((None, None));
-            out.push(ConversationSummary {
+            channels_out.push(ConversationSummary {
                 id,
                 display_name: format!("#{} {}", ch.idx, ch.name),
                 last_message: last,
                 last_timestamp: last_ts,
                 unread: ch.unread_count,
+                kind: ConversationKind::Channel,
             });
         }
 
-        // DMs : toutes les pubkeys ayant des messages en DB (dm_pubkeys), avec nom
-        // issu de self.contacts si trouvé, sinon fallback short pubkey
+        // Room servers (node_type == 3) : toujours visibles, même sans messages
+        for c in &self.contacts {
+            if c.node_type != 3 {
+                continue;
+            }
+            handled_pks.insert(c.public_key.clone());
+            let id = ConversationId::Dm(c.public_key.clone());
+            let (last, last_ts) = self
+                .chat_ui
+                .messages
+                .get(&id)
+                .and_then(|msgs| msgs.last())
+                .map(|m| (Some(m.text.clone()), Some(m.timestamp.clone())))
+                .unwrap_or((None, None));
+            let unread = self.chat_ui.unread.get(&id).copied().unwrap_or(0);
+            rooms_out.push(ConversationSummary {
+                id,
+                display_name: c.name.clone(),
+                last_message: last,
+                last_timestamp: last_ts,
+                unread,
+                kind: ConversationKind::Room,
+            });
+        }
+
+        // DMs : pubkeys ayant des messages en DB, excluant repeaters (node_type 2)
+        // et rooms déjà ajoutées (node_type 3)
         for pk in &self.dm_pubkeys {
+            // Matching bidirectionnel prefix : que le pubkey stocké soit le prefix court
+            // (12 hex typique) ou la clé complète (64 hex), on trouve le bon contact
+            let matched_contact = self.contacts.iter().find(|c| {
+                c.public_key == *pk
+                    || pk.starts_with(&c.public_key)
+                    || c.public_key.starts_with(pk)
+            });
+            if matched_contact.is_some_and(|c| c.node_type == 2 || c.node_type == 3) {
+                continue;
+            }
+            if handled_pks.contains(pk) {
+                continue;
+            }
+            handled_pks.insert(pk.clone());
             let id = ConversationId::Dm(pk.clone());
-            let display_name = self
-                .contacts
-                .iter()
-                .find(|c| c.public_key == *pk || pk.starts_with(&c.public_key))
+            let display_name = matched_contact
                 .map(|c| c.name.clone())
                 .unwrap_or_else(|| crate::util::format::short_pubkey(pk));
             let (last, last_ts) = self
@@ -1191,43 +1288,50 @@ impl App {
                 .map(|m| (Some(m.text.clone()), Some(m.timestamp.clone())))
                 .unwrap_or((None, None));
             let unread = self.chat_ui.unread.get(&id).copied().unwrap_or(0);
-            out.push(ConversationSummary {
+            dms_out.push(ConversationSummary {
                 id,
                 display_name,
                 last_message: last,
                 last_timestamp: last_ts,
                 unread,
+                kind: ConversationKind::Dm,
             });
-            dm_added.insert(pk.clone());
         }
 
-        // Ajouter aussi les contacts favoris qui n'ont pas encore de messages
-        // (donc pas dans dm_pubkeys) — utile pour initier une conversation
+        // Contacts favoris sans messages encore (client, node_type 1 ou absent)
         for c in &self.contacts {
-            if !c.is_favorite {
+            if !c.is_favorite || c.node_type == 2 || c.node_type == 3 {
                 continue;
             }
-            if dm_added.contains(&c.public_key) {
+            if handled_pks.contains(&c.public_key) {
                 continue;
             }
             let id = ConversationId::Dm(c.public_key.clone());
-            out.push(ConversationSummary {
+            dms_out.push(ConversationSummary {
                 id,
                 display_name: c.name.clone(),
                 last_message: None,
                 last_timestamp: None,
                 unread: 0,
+                kind: ConversationKind::Dm,
             });
         }
 
-        // Tri : non-lus d'abord, puis par timestamp descendant
-        out.sort_by(|a, b| {
+        // Tri intra-groupe : non-lus d'abord, puis timestamp desc, puis nom
+        let sort_fn = |a: &ConversationSummary, b: &ConversationSummary| {
             b.unread
                 .cmp(&a.unread)
                 .then_with(|| b.last_timestamp.cmp(&a.last_timestamp))
                 .then_with(|| a.display_name.cmp(&b.display_name))
-        });
-        out
+        };
+        channels_out.sort_by(sort_fn);
+        rooms_out.sort_by(sort_fn);
+        dms_out.sort_by(sort_fn);
+
+        // Ordre final : canaux, rooms, DMs (les sections visuelles sont ajoutées au render)
+        channels_out.extend(rooms_out);
+        channels_out.extend(dms_out);
+        channels_out
     }
 
     fn chat_move_selection(&mut self, delta: i32) {
@@ -1254,6 +1358,20 @@ impl App {
     }
 
     fn chat_activate(&mut self, id: ConversationId) {
+        // Si c'est une DM vers un contact de type Room (node_type 3) pas encore loggé,
+        // ouvrir d'abord la modale de login
+        if let ConversationId::Dm(pk) = &id
+            && let Some(room) = self.contacts.iter().find(|c| c.public_key == *pk)
+            && room.node_type == 3
+            && !self.rooms_logged_in.contains(pk)
+        {
+            self.ui.room_login_password = "hello".to_string();
+            self.ui.push_modal(ModalKind::RoomLogin {
+                pubkey: pk.clone(),
+                name: room.name.clone(),
+            });
+            return;
+        }
         self.chat_ui.active = Some(id.clone());
         self.chat_ui.scroll_offset = 0;
         self.chat_ui.focus = ChatFocus::Input;
@@ -1863,6 +1981,7 @@ impl App {
             AppEvent::Disconnected => {
                 self.ui.connected = false;
                 self.ui.toast("Déconnexion", ToastLevel::Warn);
+                self.rooms_logged_in.clear();
                 conn_actions::refresh_list(self.service.clone(), self.action_tx.clone());
             }
             AppEvent::Reconnecting { attempt } => {
@@ -2124,6 +2243,38 @@ impl App {
             AsyncResult::BatteryLoaded(Err(e)) => {
                 self.ui
                     .toast(format!("Batterie : {}", e), ToastLevel::Error);
+            }
+            AsyncResult::RoomLoginResult { pubkey, result } => {
+                let name = self
+                    .contacts
+                    .iter()
+                    .find(|c| c.public_key == pubkey)
+                    .map(|c| c.name.clone())
+                    .unwrap_or_else(|| {
+                        crate::util::format::short_pubkey(&pubkey)
+                    });
+                // Si c'était la room en attente, clear le spinner
+                if let Some((pending_pk, _, _)) = &self.ui.room_login_pending
+                    && pending_pk == &pubkey
+                {
+                    self.ui.room_login_pending = None;
+                }
+                match result {
+                    Ok(_) => {
+                        self.ui.toast(
+                            format!("✓ Connecté à {}", name),
+                            ToastLevel::Success,
+                        );
+                        self.rooms_logged_in.insert(pubkey);
+                    }
+                    Err(e) => {
+                        self.ui.toast(
+                            format!("Échec login {} : {}", name, e),
+                            ToastLevel::Error,
+                        );
+                        self.rooms_logged_in.remove(&pubkey);
+                    }
+                }
             }
             AsyncResult::RepeaterLoginResult(Ok(msg)) => {
                 self.repeater_ui.loading = false;

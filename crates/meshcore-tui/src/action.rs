@@ -73,6 +73,12 @@ pub enum ModalKind {
     ChannelEdit { idx: u8 },
     /// Création d'un nouveau canal (nom + PSK hex)
     ChannelNew,
+    /// Modale d'info read-only sur un contact (pubkey, GPS, last seen, etc.)
+    ContactInfo {
+        pubkey: String,
+    },
+    /// Login à une room server (demande mot de passe avant d'activer la conversation)
+    RoomLogin { pubkey: String, name: String },
     /// Administration repeater plein-écran : pubkey du repeater ciblé + nom affiché
     RepeaterAdmin { pubkey: String, name: String },
 }
@@ -111,6 +117,10 @@ pub enum AsyncResult {
     DeviceInfoLoaded(Result<meshcore_service::device::DeviceInfoSummary, String>),
     BatteryLoaded(Result<(u16, u8), String>),
     RepeaterLoginResult(Result<String, String>),
+    RoomLoginResult {
+        pubkey: String,
+        result: Result<String, String>,
+    },
     RepeaterStatusLoaded(Result<meshcore_service::repeater::RepeaterStatus, String>),
     RepeaterNeighboursLoaded(Result<Vec<meshcore_service::repeater::RepeaterNeighbour>, String>),
     RepeaterAclLoaded(Result<Vec<meshcore_service::repeater::AclEntry>, String>),
@@ -176,6 +186,8 @@ pub enum Action {
     ContactsRequestDelete,
     ContactsConfirmDelete(String),
     ContactsCycleSort,
+    ContactsRequestInfo,
+    ContactsCopyPubkey,
 
     // Chat
     ChatSelectPrev,
@@ -204,6 +216,10 @@ pub enum Action {
     ChatLoadOlder,
     ChatRefreshConversations,
     ChatOpenContact(String),
+    /// Modale de login à une room server en cours
+    RoomLoginChar(char),
+    RoomLoginBackspace,
+    RoomLoginSubmit,
 
     // Channels
     ChannelsRefresh,

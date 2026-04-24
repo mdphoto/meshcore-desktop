@@ -1,5 +1,5 @@
 use crate::theme;
-use crate::util::format::relative_time;
+use crate::util::format::{relative_time, strip_sender_prefix};
 use meshcore_storage::models::StoredMessage;
 use ratatui::{
     Frame,
@@ -117,11 +117,14 @@ fn message_line(msg: &StoredMessage) -> Line<'static> {
     };
 
     let ts = relative_time(&msg.timestamp);
+    // Retire le préfixe « Nom: » du texte si on l'a déjà dans sender_name
+    // (évite l'affichage dupliqué)
+    let clean_text = strip_sender_prefix(&msg.text, &msg.sender_name);
 
     Line::from(vec![
         Span::styled(format!(" [{}] ", ts), theme::dim()),
         Span::styled(format!("{}: ", prefix), prefix_style),
-        Span::raw(msg.text.clone()),
+        Span::raw(clean_text.to_string()),
         status_icon,
     ])
 }

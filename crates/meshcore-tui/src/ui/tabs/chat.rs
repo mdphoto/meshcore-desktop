@@ -1,6 +1,6 @@
 use crate::app::App;
 use crate::state::FocusTarget;
-use crate::state::chat::{ChatFocus, ConversationId, ConversationSummary};
+use crate::state::chat::{ChatFocus, ConversationId, ConversationKind};
 use crate::theme;
 use crate::util::unicode::truncate;
 use ratatui::{
@@ -59,34 +59,60 @@ fn render_conversations(frame: &mut Frame, area: Rect, app: &App) {
         return;
     }
 
-    let items: Vec<ListItem> = summaries
-        .iter()
-        .map(|s: &ConversationSummary| {
-            let marker = match s.id {
-                ConversationId::Channel(_) => "#",
-                ConversationId::Dm(_) => "·",
-            };
-            let unread = if s.unread > 0 {
-                format!(" ({})", s.unread)
-            } else {
-                String::new()
-            };
-            let mut lines = Vec::new();
-            lines.push(Line::from(vec![
-                Span::raw(format!(" {} {}", marker, truncate(&s.display_name, 20))),
-                Span::styled(unread, theme::warn_style()),
-            ]));
-            if let Some(last) = &s.last_message {
-                lines.push(Line::from(Span::styled(
-                    format!("    {}", truncate(last, 22)),
-                    theme::dim(),
-                )));
+    // Construction avec sections visuelles (Canaux / Rooms / Messages directs).
+    // On trace une map summary_idx → display_idx pour convertir la sélection logique
+    // (qui vit dans conversations_list_state et indexe `summaries`) vers la position
+    // affichée dans la List ratatui (qui inclut les headers).
+    let mut items: Vec<ListItem> = Vec::new();
+    let mut summary_to_display: Vec<usize> = Vec::with_capacity(summaries.len());
+    let mut last_kind: Option<ConversationKind> = None;
+    for s in &summaries {
+        if last_kind != Some(s.kind) {
+            if last_kind.is_some() {
+                items.push(ListItem::new(Line::from(""))); // ligne vide de séparation
             }
-            ListItem::new(lines)
-        })
-        .collect();
+            let header = match s.kind {
+                ConversationKind::Channel => " ── Canaux ──",
+                ConversationKind::Room => " ── Rooms ──",
+                ConversationKind::Dm => " ── Messages directs ──",
+            };
+            items.push(ListItem::new(Line::from(Span::styled(
+                header,
+                theme::title(),
+            ))));
+            last_kind = Some(s.kind);
+        }
+        summary_to_display.push(items.len()); // position de la prochaine conv dans items
+        let marker = match s.kind {
+            ConversationKind::Channel => "#",
+            ConversationKind::Room => "R",
+            ConversationKind::Dm => "·",
+        };
+        let unread = if s.unread > 0 {
+            format!(" ({})", s.unread)
+        } else {
+            String::new()
+        };
+        let mut lines = Vec::new();
+        lines.push(Line::from(vec![
+            Span::raw(format!(" {} {}", marker, truncate(&s.display_name, 20))),
+            Span::styled(unread, theme::warn_style()),
+        ]));
+        if let Some(last) = &s.last_message {
+            lines.push(Line::from(Span::styled(
+                format!("    {}", truncate(last, 22)),
+                theme::dim(),
+            )));
+        }
+        items.push(ListItem::new(lines));
+    }
 
-    let mut list_state = app.chat_ui.conversations_list_state.clone();
+    // Conversion : l'index stocké dans conversations_list_state est un index summary,
+    // on trouve la position display correspondante pour que ratatui highlight la bonne ligne
+    let selected_summary = app.chat_ui.conversations_list_state.selected();
+    let display_selected = selected_summary.and_then(|i| summary_to_display.get(i).copied());
+    let mut list_state = ratatui::widgets::ListState::default().with_selected(display_selected);
+
     let list = List::new(items)
         .block(block)
         .highlight_style(theme::selected_row())

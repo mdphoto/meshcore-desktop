@@ -13,6 +13,14 @@ pub enum ConversationId {
     Channel(u8),
 }
 
+/// Type de conversation — utilisé pour grouper l'affichage avec des séparateurs
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConversationKind {
+    Channel,
+    Room,
+    Dm,
+}
+
 /// Un résumé de conversation pour la liste latérale
 #[derive(Debug, Clone)]
 pub struct ConversationSummary {
@@ -21,6 +29,7 @@ pub struct ConversationSummary {
     pub last_message: Option<String>,
     pub last_timestamp: Option<String>,
     pub unread: u32,
+    pub kind: ConversationKind,
 }
 
 pub struct ChatUiState {

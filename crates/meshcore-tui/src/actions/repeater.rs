@@ -15,6 +15,23 @@ pub fn spawn_login(
     });
 }
 
+/// Variante spécifique pour le login à une room server : renvoie le résultat
+/// avec la pubkey ciblée pour que l'UI puisse updater `rooms_logged_in`.
+pub fn spawn_room_login(
+    state: Arc<AppState>,
+    pubkey: String,
+    password: String,
+    action_tx: UnboundedSender<Action>,
+) {
+    tokio::spawn(async move {
+        let result = meshcore_service::repeater::login(&state, &pubkey, &password).await;
+        let _ = action_tx.send(Action::Async(AsyncResult::RoomLoginResult {
+            pubkey,
+            result,
+        }));
+    });
+}
+
 pub fn spawn_logout(
     state: Arc<AppState>,
     pubkey: String,

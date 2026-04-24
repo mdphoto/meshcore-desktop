@@ -30,7 +30,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         String::new()
     };
     let title = format!(
-        " Contacts ({}) · tri : {}{} · [s] sync  [f] favori  [d] supprimer  [t] tri ",
+        " Contacts ({}) · tri : {}{} · [i] info  [s] sync  [f] favori  [d] suppr  [t] tri ",
         app.contacts.len(),
         app.ui.contacts_sort.label(),
         sync_hint,
