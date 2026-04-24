@@ -489,12 +489,17 @@ impl App {
                 }
             }
             Action::ChannelsEditToggleNotifications => {
-                // Tab cycle les 3 champs ; sur le champ notif, active/désactive
+                // Bascule la case à cocher — n'agit que si on est sur le champ Notifications
                 if self.ui.channel_edit_field == 1 {
                     self.ui.channel_edit_notifications =
                         !self.ui.channel_edit_notifications;
                 }
+            }
+            Action::ChannelsEditNextField => {
                 self.ui.channel_edit_field = (self.ui.channel_edit_field + 1) % 3;
+            }
+            Action::ChannelsEditPrevField => {
+                self.ui.channel_edit_field = (self.ui.channel_edit_field + 2) % 3;
             }
             Action::ChannelsEditSubmit => {
                 self.submit_channel_edit(false);

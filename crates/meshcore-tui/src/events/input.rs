@@ -133,7 +133,11 @@ fn map_modal_key(key: KeyEvent, ui: &AppUiState) -> Action {
         Some(ModalKind::ChannelEdit { .. }) => match key.code {
             KeyCode::Esc => Action::CloseModal,
             KeyCode::Enter => Action::ChannelsEditSubmit,
-            KeyCode::Tab => Action::ChannelsEditToggleNotifications,
+            // Tab ne fait QUE changer de champ
+            KeyCode::Tab => Action::ChannelsEditNextField,
+            KeyCode::BackTab => Action::ChannelsEditPrevField,
+            // Space toggle uniquement sur le champ Notifications
+            KeyCode::Char(' ') => Action::ChannelsEditToggleNotifications,
             KeyCode::F(2) => Action::ChannelsEditSyncAndSubmit,
             KeyCode::Backspace => Action::ChannelsEditNameBackspace,
             KeyCode::Char(c) => Action::ChannelsEditNameChar(c),

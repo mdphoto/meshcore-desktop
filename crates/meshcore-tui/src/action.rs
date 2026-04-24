@@ -196,6 +196,8 @@ pub enum Action {
     ChannelsEditNameChar(char),
     ChannelsEditNameBackspace,
     ChannelsEditToggleNotifications,
+    ChannelsEditNextField,
+    ChannelsEditPrevField,
     ChannelsEditSubmit,
     ChannelsEditSyncAndSubmit,
 

@@ -313,15 +313,17 @@ fn render_channel_edit(
         .border_style(theme::focused_border())
         .title(format!(" Éditer le canal #{} ", idx));
 
-    let notif_text = if notifications {
-        "🔔 activées"
+    let checkbox = if notifications { "[x]" } else { "[ ]" };
+    let notif_label = if notifications {
+        "Notifications activées 🔔"
     } else {
-        "🔕 désactivées"
+        "Notifications désactivées 🔕"
     };
     let cursor_if = |field: u8| if active_field == field { "_" } else { "" };
     let arrow = |field: u8| if active_field == field { "▶ " } else { "  " };
 
     let name_style = if active_field == 0 { theme::title() } else { theme::dim() };
+    let notif_style = if active_field == 1 { theme::title() } else { theme::dim() };
     let scope_style = if active_field == 2 { theme::title() } else { theme::dim() };
 
     let body = vec![
@@ -339,8 +341,14 @@ fn render_channel_edit(
         Line::from(""),
         Line::from(vec![
             Span::styled(arrow(1), theme::title()),
-            Span::raw("Notifications : "),
-            Span::styled(notif_text, if active_field == 1 { theme::title() } else { theme::dim() }),
+            Span::styled(
+                format!("{}  {}", checkbox, notif_label),
+                notif_style,
+            ),
+            Span::styled(
+                if active_field == 1 { "   (Espace pour cocher/décocher)" } else { "" },
+                theme::dim(),
+            ),
         ]),
         Line::from(""),
         Line::from(vec![
@@ -368,13 +376,17 @@ fn render_channel_edit(
         Line::from(""),
         Line::from(vec![
             Span::styled("[Tab]", theme::title()),
-            Span::raw(" champ suivant (notif = toggle)  "),
+            Span::raw(" / "),
+            Span::styled("[Shift-Tab]", theme::title()),
+            Span::raw(" champ  "),
+            Span::styled("[Espace]", theme::title()),
+            Span::raw(" cocher notifications  "),
             Span::styled("[Enter]", theme::title()),
-            Span::raw(" Enregistrer  "),
-            Span::styled("[F2]", theme::title()),
-            Span::raw(" + sync device"),
+            Span::raw(" Enregistrer"),
         ]),
         Line::from(vec![
+            Span::styled("[F2]", theme::title()),
+            Span::raw(" Enregistrer + sync device  "),
             Span::styled("[Esc]", theme::title()),
             Span::raw(" Annuler"),
         ]),
