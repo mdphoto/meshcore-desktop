@@ -12,7 +12,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let focused = matches!(app.ui.focus, FocusTarget::ChannelsList);
     let total = app.channels.len();
     let title = format!(
-        " Canaux ({}) — [e] éditer  [r] lu  [s] sync device  [d] supprimer  [Enter] chat ",
+        " Canaux ({}) — [n] nouveau  [e] éditer  [r] lu  [s] sync  [d] suppr  [Enter] chat ",
         total
     );
     let block = Block::default()

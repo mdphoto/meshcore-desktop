@@ -19,6 +19,11 @@ pub fn render(
     channel_edit_notifications: bool,
     channel_edit_scope: &str,
     channel_edit_field: u8,
+    channel_edit_psk_hex: &str,
+    channel_new_name: &str,
+    channel_new_psk_hex: &str,
+    channel_new_field: u8,
+    channel_new_idx: Option<u8>,
 ) {
     // Cas spécial : ChannelEdit a besoin de ses propres champs
     if let ModalKind::ChannelEdit { idx } = modal {
@@ -30,6 +35,18 @@ pub fn render(
             channel_edit_notifications,
             channel_edit_scope,
             channel_edit_field,
+            channel_edit_psk_hex,
+        );
+        return;
+    }
+    if matches!(modal, ModalKind::ChannelNew) {
+        render_channel_new(
+            frame,
+            area,
+            channel_new_name,
+            channel_new_psk_hex,
+            channel_new_field,
+            channel_new_idx,
         );
         return;
     }
@@ -152,7 +169,7 @@ pub fn render(
                 ]),
             ],
         ),
-        ModalKind::ChannelEdit { .. } => {
+        ModalKind::ChannelEdit { .. } | ModalKind::ChannelNew => {
             // Déjà géré en court-circuit en tête de fonction
             return;
         }
@@ -298,6 +315,115 @@ fn help_lines() -> Vec<Line<'static>> {
     ]
 }
 
+fn render_channel_new(
+    frame: &mut Frame,
+    area: Rect,
+    name: &str,
+    psk_hex: &str,
+    active_field: u8,
+    next_idx: Option<u8>,
+) {
+    let rect = centered_rect(70, 60, area);
+    let idx_label = next_idx
+        .map(|i| format!("#{}", i))
+        .unwrap_or_else(|| "aucun libre".to_string());
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(theme::focused_border())
+        .title(format!(" Nouveau canal — slot {} ", idx_label));
+
+    let arrow = |field: u8| if active_field == field { "▶ " } else { "  " };
+    let name_style = if active_field == 0 { theme::title() } else { theme::dim() };
+    let psk_style = if active_field == 1 { theme::title() } else { theme::dim() };
+    let cursor_if = |field: u8| if active_field == field { "_" } else { "" };
+
+    let is_hashtag = name.trim().starts_with('#');
+    let psk_status = match psk_hex.len() {
+        0 if is_hashtag => "(vide — dérivé auto depuis le nom au submit)".to_string(),
+        0 => "(vide — [F3] aléatoire  [F4] dériver du nom)".to_string(),
+        32 => "(32 hex OK)".to_string(),
+        n => format!("({}/32 hex)", n),
+    };
+
+    let mut body = vec![
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(arrow(0), theme::title()),
+            Span::styled("Nom du canal :", name_style),
+        ]),
+        Line::from(vec![
+            Span::raw("    "),
+            Span::styled("> ", theme::title()),
+            Span::raw(name.to_string()),
+            Span::styled(cursor_if(0), theme::dim()),
+        ]),
+    ];
+    if is_hashtag {
+        body.push(Line::from(Span::styled(
+            "    ↳ hashtag room : PSK = SHA256(nom)[:16] — tout le monde",
+            theme::ok_style(),
+        )));
+        body.push(Line::from(Span::styled(
+            "      qui tape ce nom obtient la même clé automatiquement",
+            theme::dim(),
+        )));
+    }
+    body.extend_from_slice(&[
+        Line::from(""),
+        Line::from(vec![
+            Span::styled(arrow(1), theme::title()),
+            Span::styled(
+                format!("PSK hex — 32 caractères = 16 octets {}", psk_status),
+                psk_style,
+            ),
+        ]),
+        Line::from(vec![
+            Span::raw("    "),
+            Span::styled("> ", theme::title()),
+            Span::raw(psk_hex.to_string()),
+            Span::styled(cursor_if(1), theme::dim()),
+        ]),
+        Line::from(""),
+        Line::from(Span::styled(
+            "  La clé partagée est utilisée pour le chiffrement AES-128 du canal.",
+            theme::dim(),
+        )),
+        Line::from(Span::styled(
+            "  Canal privé : tous les membres doivent avoir la même clé (QR code, copier).",
+            theme::dim(),
+        )),
+        Line::from(Span::styled(
+            "  Hashtag room (nom commençant par #) : clé dérivée automatiquement.",
+            theme::dim(),
+        )),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("[F3]", theme::title()),
+            Span::raw(" PSK aléatoire  "),
+            Span::styled("[F4]", theme::title()),
+            Span::raw(" Dériver du nom (hashtag)  "),
+            Span::styled("[Tab]", theme::title()),
+            Span::raw(" champ"),
+        ]),
+        Line::from(vec![
+            Span::styled("[Enter]", theme::title()),
+            Span::raw(" Créer + sync device  "),
+            Span::styled("[Esc]", theme::title()),
+            Span::raw(" Annuler"),
+        ]),
+    ]);
+
+    frame.render_widget(Clear, rect);
+    frame.render_widget(
+        Paragraph::new(body)
+            .block(block)
+            .alignment(Alignment::Left)
+            .wrap(Wrap { trim: false }),
+        rect,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
 fn render_channel_edit(
     frame: &mut Frame,
     area: Rect,
@@ -306,8 +432,9 @@ fn render_channel_edit(
     notifications: bool,
     scope: &str,
     active_field: u8,
+    psk_hex: &str,
 ) {
-    let rect = centered_rect(68, 60, area);
+    let rect = centered_rect(72, 70, area);
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(theme::focused_border())
@@ -369,8 +496,13 @@ fn render_channel_edit(
             "  Le scope est stocké localement (comme l'app Android : côté client).",
             theme::dim(),
         )),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("  PSK (read-only) : ", theme::title()),
+            Span::styled(psk_hex.to_string(), theme::dim()),
+        ]),
         Line::from(Span::styled(
-            "  La clé partagée (PSK) n'est pas modifiable ici.",
+            "  [F5] copier le PSK dans le presse-papier (pour partager à un membre).",
             theme::dim(),
         )),
         Line::from(""),
@@ -380,13 +512,15 @@ fn render_channel_edit(
             Span::styled("[Shift-Tab]", theme::title()),
             Span::raw(" champ  "),
             Span::styled("[Espace]", theme::title()),
-            Span::raw(" cocher notifications  "),
-            Span::styled("[Enter]", theme::title()),
-            Span::raw(" Enregistrer"),
+            Span::raw(" cocher notifications"),
         ]),
         Line::from(vec![
+            Span::styled("[Enter]", theme::title()),
+            Span::raw(" Enregistrer  "),
             Span::styled("[F2]", theme::title()),
-            Span::raw(" Enregistrer + sync device  "),
+            Span::raw(" + sync device  "),
+            Span::styled("[F5]", theme::title()),
+            Span::raw(" copier PSK  "),
             Span::styled("[Esc]", theme::title()),
             Span::raw(" Annuler"),
         ]),

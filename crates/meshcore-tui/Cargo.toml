@@ -38,6 +38,8 @@ futures = "0.3"
 btleplug = { workspace = true }
 tokio-serial = { workspace = true }
 uuid = { workspace = true }
+rand = { workspace = true }
+sha2 = { workspace = true }
 
 [features]
 default = []

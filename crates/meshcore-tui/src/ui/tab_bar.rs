@@ -8,6 +8,9 @@ use ratatui::{
     widgets::{Block, Borders, Tabs},
 };
 
+/// Version récupérée à la compilation depuis le Cargo.toml du crate
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 pub fn render(frame: &mut Frame, area: Rect, current: &Tab) {
     let titles: Vec<Line> = Tab::all()
         .iter()
@@ -17,7 +20,7 @@ pub fn render(frame: &mut Frame, area: Rect, current: &Tab) {
     let block = Block::default()
         .borders(Borders::ALL)
         .border_style(theme::dim())
-        .title(" MeshCore TUI ");
+        .title(format!(" MeshCore TUI v{} ", VERSION));
 
     let tabs = Tabs::new(titles)
         .block(block)

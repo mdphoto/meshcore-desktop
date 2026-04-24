@@ -29,6 +29,8 @@ pub fn render(frame: &mut Frame, app: &App) {
         if let crate::action::ModalKind::RepeaterAdmin { pubkey, name } = modal {
             widgets::repeater_modal::render(frame, frame.area(), app, pubkey, name);
         } else {
+            let channel_new_idx = (0u8..=7)
+                .find(|idx| !app.channels.iter().any(|c| c.idx == *idx));
             widgets::modal::render(
                 frame,
                 frame.area(),
@@ -40,6 +42,11 @@ pub fn render(frame: &mut Frame, app: &App) {
                 app.ui.channel_edit_notifications,
                 &app.ui.channel_edit_scope,
                 app.ui.channel_edit_field,
+                &app.ui.channel_edit_psk_hex,
+                &app.ui.channel_new_name,
+                &app.ui.channel_new_psk_hex,
+                app.ui.channel_new_field,
+                channel_new_idx,
             );
         }
     }

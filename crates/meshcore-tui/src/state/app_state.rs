@@ -80,6 +80,14 @@ pub struct AppUiState {
     pub channel_edit_scope: String,
     /// Champ actif dans la modale d'édition (0=name, 1=notif, 2=scope)
     pub channel_edit_field: u8,
+    /// PSK hex du canal en cours d'édition (read-only, affiché pour copie)
+    pub channel_edit_psk_hex: String,
+    // Création d'un nouveau canal
+    pub channel_new_name: String,
+    /// PSK 32 caractères hex = 16 octets (affiché en hex pour lisibilité)
+    pub channel_new_psk_hex: String,
+    /// Champ actif dans la modale création (0=name, 1=psk)
+    pub channel_new_field: u8,
 }
 
 impl Default for AppUiState {
@@ -112,6 +120,10 @@ impl AppUiState {
             channel_edit_notifications: true,
             channel_edit_scope: String::new(),
             channel_edit_field: 0,
+            channel_edit_psk_hex: String::new(),
+            channel_new_name: String::new(),
+            channel_new_psk_hex: String::new(),
+            channel_new_field: 0,
         }
     }
 

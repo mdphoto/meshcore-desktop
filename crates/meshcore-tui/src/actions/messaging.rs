@@ -4,6 +4,23 @@ use meshcore_service::AppState;
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 
+/// Charge depuis la DB les pubkeys de tous les contacts ayant des messages DM,
+/// triées par dernier message. Utilisé pour afficher les conversations existantes
+/// au démarrage, même sans clic préalable.
+pub fn reload_dm_pubkeys(state: Arc<AppState>, action_tx: UnboundedSender<Action>) {
+    tokio::spawn(async move {
+        match meshcore_service::messaging::get_dm_pubkeys(&state) {
+            Ok(list) => {
+                tracing::info!("tui: {} DM pubkeys chargés depuis DB", list.len());
+                let _ = action_tx.send(Action::Async(AsyncResult::DmPubkeysLoaded(list)));
+            }
+            Err(e) => {
+                tracing::warn!("tui: reload_dm_pubkeys: {}", e);
+            }
+        }
+    });
+}
+
 pub fn load_messages(
     state: Arc<AppState>,
     conversation: ConversationId,

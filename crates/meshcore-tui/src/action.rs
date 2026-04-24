@@ -71,6 +71,8 @@ pub enum ModalKind {
     ConfirmReboot,
     /// Édition d'un canal (nom + notifications)
     ChannelEdit { idx: u8 },
+    /// Création d'un nouveau canal (nom + PSK hex)
+    ChannelNew,
     /// Administration repeater plein-écran : pubkey du repeater ciblé + nom affiché
     RepeaterAdmin { pubkey: String, name: String },
 }
@@ -93,6 +95,7 @@ pub enum AsyncResult {
     ContactsSyncDone(Result<usize, String>),
     ConnectionsListed(Vec<ConnectionInfo>),
     ChannelsReloaded(Vec<meshcore_storage::channels::StoredChannel>),
+    DmPubkeysLoaded(Vec<String>),
     MessagesLoaded {
         conversation: crate::state::chat::ConversationId,
         messages: Vec<meshcore_storage::models::StoredMessage>,
@@ -177,8 +180,13 @@ pub enum Action {
     ChatFocusNext,
     ChatInputChar(char),
     ChatInputBackspace,
+    ChatInputDelete,
     ChatInputLeft,
     ChatInputRight,
+    ChatInputHome,
+    ChatInputEnd,
+    ChatInputDeletePrevWord,
+    ChatInputClear,
     ChatSend,
     ChatScrollUp,
     ChatScrollDown,
@@ -200,6 +208,15 @@ pub enum Action {
     ChannelsEditPrevField,
     ChannelsEditSubmit,
     ChannelsEditSyncAndSubmit,
+    ChannelsEditCopyPsk,
+    ChannelsRequestNew,
+    ChannelsNewChar(char),
+    ChannelsNewBackspace,
+    ChannelsNewNextField,
+    ChannelsNewPrevField,
+    ChannelsNewGeneratePsk,
+    ChannelsNewDeriveFromName,
+    ChannelsNewSubmit,
 
     // Device
     DeviceRefresh,

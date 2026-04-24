@@ -148,6 +148,10 @@ pub struct App {
     pub channels_list_state: ListState,
     /// Scope par canal persistant (stocké dans settings avec clé "channel.scope.N")
     pub channel_scopes: std::collections::HashMap<u8, String>,
+    /// Pubkeys des contacts ayant des messages DM en DB, triées par dernier message (desc).
+    /// Chargé depuis la DB au démarrage et après chaque Connected/réception — permet
+    /// de lister dans la tab Chat les conversations existantes sans clic préalable.
+    pub dm_pubkeys: Vec<String>,
     pub action_tx: UnboundedSender<Action>,
     pub auto_reconnect_on_startup: bool,
 }
@@ -173,6 +177,7 @@ impl App {
             channels: Vec::new(),
             channels_list_state,
             channel_scopes: std::collections::HashMap::new(),
+            dm_pubkeys: Vec::new(),
             action_tx,
             auto_reconnect_on_startup: false,
         }
@@ -280,6 +285,7 @@ impl App {
         // Premier refresh
         contact_actions::reload(self.service.clone(), self.action_tx.clone());
         channel_actions::reload(self.service.clone(), self.action_tx.clone());
+        messaging_actions::reload_dm_pubkeys(self.service.clone(), self.action_tx.clone());
         conn_actions::refresh_list(self.service.clone(), self.action_tx.clone());
 
         // Auto-reconnect au dernier companion (si demandé et aucune connexion active)
@@ -397,6 +403,10 @@ impl App {
                 use tui_input::InputRequest;
                 self.chat_ui.input.handle(InputRequest::DeletePrevChar);
             }
+            Action::ChatInputDelete => {
+                use tui_input::InputRequest;
+                self.chat_ui.input.handle(InputRequest::DeleteNextChar);
+            }
             Action::ChatInputLeft => {
                 use tui_input::InputRequest;
                 self.chat_ui.input.handle(InputRequest::GoToPrevChar);
@@ -404,6 +414,21 @@ impl App {
             Action::ChatInputRight => {
                 use tui_input::InputRequest;
                 self.chat_ui.input.handle(InputRequest::GoToNextChar);
+            }
+            Action::ChatInputHome => {
+                use tui_input::InputRequest;
+                self.chat_ui.input.handle(InputRequest::GoToStart);
+            }
+            Action::ChatInputEnd => {
+                use tui_input::InputRequest;
+                self.chat_ui.input.handle(InputRequest::GoToEnd);
+            }
+            Action::ChatInputDeletePrevWord => {
+                use tui_input::InputRequest;
+                self.chat_ui.input.handle(InputRequest::DeletePrevWord);
+            }
+            Action::ChatInputClear => {
+                self.chat_ui.input.reset();
             }
             Action::ChatSend => self.chat_send_current(),
             Action::ChatScrollUp => {
@@ -466,8 +491,31 @@ impl App {
                         .get(&c.idx)
                         .cloned()
                         .unwrap_or_default();
+                    self.ui.channel_edit_psk_hex =
+                        c.psk.iter().map(|b| format!("{:02x}", b)).collect();
                     self.ui.channel_edit_field = 0;
                     self.ui.push_modal(ModalKind::ChannelEdit { idx: c.idx });
+                }
+            }
+            Action::ChannelsEditCopyPsk => {
+                let psk_hex = self.ui.channel_edit_psk_hex.clone();
+                if psk_hex.is_empty() {
+                    self.ui.toast("Aucun PSK à copier", ToastLevel::Warn);
+                } else {
+                    match crate::util::format::copy_to_clipboard(&psk_hex) {
+                        Ok(()) => {
+                            self.ui.toast(
+                                "PSK copié dans le presse-papier (OSC 52)",
+                                ToastLevel::Success,
+                            );
+                        }
+                        Err(e) => {
+                            self.ui.toast(
+                                format!("Échec copie : {}", e),
+                                ToastLevel::Error,
+                            );
+                        }
+                    }
                 }
             }
             Action::ChannelsEditNameChar(c) => {
@@ -506,6 +554,76 @@ impl App {
             }
             Action::ChannelsEditSyncAndSubmit => {
                 self.submit_channel_edit(true);
+            }
+            Action::ChannelsRequestNew => {
+                if self.find_free_channel_idx().is_none() {
+                    self.ui.toast(
+                        "Aucun slot libre (max 8 canaux 0..7)",
+                        ToastLevel::Warn,
+                    );
+                } else {
+                    self.ui.channel_new_name.clear();
+                    self.ui.channel_new_psk_hex.clear();
+                    self.ui.channel_new_field = 0;
+                    self.ui.push_modal(ModalKind::ChannelNew);
+                }
+            }
+            Action::ChannelsNewChar(c) => {
+                match self.ui.channel_new_field {
+                    0 => self.ui.channel_new_name.push(c),
+                    1 if c.is_ascii_hexdigit()
+                        && self.ui.channel_new_psk_hex.len() < 32 =>
+                    {
+                        // PSK : uniquement hex, limité à 32 caractères (16 octets)
+                        self.ui.channel_new_psk_hex.push(c.to_ascii_lowercase());
+                    }
+                    _ => {}
+                }
+            }
+            Action::ChannelsNewBackspace => {
+                match self.ui.channel_new_field {
+                    0 => {
+                        self.ui.channel_new_name.pop();
+                    }
+                    1 => {
+                        self.ui.channel_new_psk_hex.pop();
+                    }
+                    _ => {}
+                }
+            }
+            Action::ChannelsNewNextField => {
+                self.ui.channel_new_field = (self.ui.channel_new_field + 1) % 2;
+            }
+            Action::ChannelsNewPrevField => {
+                self.ui.channel_new_field = (self.ui.channel_new_field + 1) % 2;
+            }
+            Action::ChannelsNewGeneratePsk => {
+                use rand::RngCore;
+                let mut psk = [0u8; 16];
+                rand::thread_rng().fill_bytes(&mut psk);
+                self.ui.channel_new_psk_hex =
+                    psk.iter().map(|b| format!("{:02x}", b)).collect();
+                self.ui.toast("PSK aléatoire généré", ToastLevel::Info);
+            }
+            Action::ChannelsNewDeriveFromName => {
+                let name = self.ui.channel_new_name.trim().to_string();
+                if name.is_empty() {
+                    self.ui.toast(
+                        "Saisir d'abord le nom (ex: #meteo)",
+                        ToastLevel::Warn,
+                    );
+                } else {
+                    let psk = crate::util::format::derive_hashtag_psk(&name);
+                    self.ui.channel_new_psk_hex =
+                        psk.iter().map(|b| format!("{:02x}", b)).collect();
+                    self.ui.toast(
+                        format!("PSK dérivé de « {} » (SHA256[:16])", name),
+                        ToastLevel::Info,
+                    );
+                }
+            }
+            Action::ChannelsNewSubmit => {
+                self.submit_channel_new();
             }
 
             // --- Device ---
@@ -965,6 +1083,11 @@ impl App {
             }
             // Recharger aussi les canaux pour mettre à jour les unread_count
             channel_actions::reload(self.service.clone(), self.action_tx.clone());
+            // Et la liste des DMs : de nouveaux pubkeys peuvent être apparus
+            messaging_actions::reload_dm_pubkeys(
+                self.service.clone(),
+                self.action_tx.clone(),
+            );
         }
     }
 
@@ -976,26 +1099,30 @@ impl App {
 
     // === Chat helpers ===
 
-    /// Construit les résumés de conversations (DM favoris + canaux + tout ce qui a déjà des messages)
+    /// Construit les résumés de conversations affichés dans la tab Chat.
+    ///
+    /// Contient : tous les canaux + tous les contacts favoris + tous les contacts
+    /// ayant des messages en DB (via `self.dm_pubkeys` rempli par `reload_dm_pubkeys`).
+    /// Les DMs sans contact correspondant (pubkey jamais sync) sont affichés avec un
+    /// fallback sur le prefix de la pubkey.
     pub fn chat_conversation_summaries(&self) -> Vec<ConversationSummary> {
+        use std::collections::HashSet;
+
         let mut out: Vec<ConversationSummary> = Vec::new();
+        let mut dm_added: HashSet<String> = HashSet::new();
 
         // Canaux (toujours visibles)
         for ch in &self.channels {
-            let last = self
+            let id = ConversationId::Channel(ch.idx);
+            let (last, last_ts) = self
                 .chat_ui
                 .messages
-                .get(&ConversationId::Channel(ch.idx))
+                .get(&id)
                 .and_then(|msgs| msgs.last())
-                .map(|m| m.text.clone());
-            let last_ts = self
-                .chat_ui
-                .messages
-                .get(&ConversationId::Channel(ch.idx))
-                .and_then(|msgs| msgs.last())
-                .map(|m| m.timestamp.clone());
+                .map(|m| (Some(m.text.clone()), Some(m.timestamp.clone())))
+                .unwrap_or((None, None));
             out.push(ConversationSummary {
-                id: ConversationId::Channel(ch.idx),
+                id,
                 display_name: format!("#{} {}", ch.idx, ch.name),
                 last_message: last,
                 last_timestamp: last_ts,
@@ -1003,17 +1130,16 @@ impl App {
             });
         }
 
-        // Contacts favoris + contacts qui ont des messages
-        for c in &self.contacts {
-            let id = ConversationId::Dm(c.public_key.clone());
-            let has_messages = self
-                .chat_ui
-                .messages
-                .get(&id)
-                .is_some_and(|m| !m.is_empty());
-            if !c.is_favorite && !has_messages {
-                continue;
-            }
+        // DMs : toutes les pubkeys ayant des messages en DB (dm_pubkeys), avec nom
+        // issu de self.contacts si trouvé, sinon fallback short pubkey
+        for pk in &self.dm_pubkeys {
+            let id = ConversationId::Dm(pk.clone());
+            let display_name = self
+                .contacts
+                .iter()
+                .find(|c| c.public_key == *pk || pk.starts_with(&c.public_key))
+                .map(|c| c.name.clone())
+                .unwrap_or_else(|| crate::util::format::short_pubkey(pk));
             let (last, last_ts) = self
                 .chat_ui
                 .messages
@@ -1024,10 +1150,30 @@ impl App {
             let unread = self.chat_ui.unread.get(&id).copied().unwrap_or(0);
             out.push(ConversationSummary {
                 id,
-                display_name: c.name.clone(),
+                display_name,
                 last_message: last,
                 last_timestamp: last_ts,
                 unread,
+            });
+            dm_added.insert(pk.clone());
+        }
+
+        // Ajouter aussi les contacts favoris qui n'ont pas encore de messages
+        // (donc pas dans dm_pubkeys) — utile pour initier une conversation
+        for c in &self.contacts {
+            if !c.is_favorite {
+                continue;
+            }
+            if dm_added.contains(&c.public_key) {
+                continue;
+            }
+            let id = ConversationId::Dm(c.public_key.clone());
+            out.push(ConversationSummary {
+                id,
+                display_name: c.name.clone(),
+                last_message: None,
+                last_timestamp: None,
+                unread: 0,
             });
         }
 
@@ -1164,6 +1310,92 @@ impl App {
     fn selected_channel(&self) -> Option<&meshcore_storage::channels::StoredChannel> {
         self.channels
             .get(self.channels_list_state.selected().unwrap_or(0))
+    }
+
+    /// Premier index 0..=7 non déjà utilisé dans self.channels
+    fn find_free_channel_idx(&self) -> Option<u8> {
+        (0u8..=7).find(|idx| !self.channels.iter().any(|c| c.idx == *idx))
+    }
+
+    fn submit_channel_new(&mut self) {
+        let name = self.ui.channel_new_name.trim().to_string();
+        if name.is_empty() {
+            self.ui.toast("Le nom ne peut pas être vide", ToastLevel::Warn);
+            return;
+        }
+
+        // Hashtag room : si le nom commence par # et le PSK est vide,
+        // on dérive automatiquement le PSK via SHA256(name)[:16] (convention MeshCore)
+        let is_hashtag = name.starts_with('#');
+        let psk_hex = self.ui.channel_new_psk_hex.clone();
+        let psk: [u8; 16] = if is_hashtag && psk_hex.is_empty() {
+            self.ui.toast(
+                format!("Hashtag room « {} » — PSK dérivé automatiquement", name),
+                ToastLevel::Info,
+            );
+            crate::util::format::derive_hashtag_psk(&name)
+        } else {
+            if psk_hex.len() != 32 {
+                self.ui.toast(
+                    "PSK doit faire 32 caractères hex (16 octets). [F3] aléatoire, [F4] hashtag.",
+                    ToastLevel::Warn,
+                );
+                return;
+            }
+            let mut psk = [0u8; 16];
+            for i in 0..16 {
+                let byte_str = &psk_hex[i * 2..i * 2 + 2];
+                match u8::from_str_radix(byte_str, 16) {
+                    Ok(b) => psk[i] = b,
+                    Err(_) => {
+                        self.ui.toast(
+                            "PSK contient des caractères non-hex",
+                            ToastLevel::Error,
+                        );
+                        return;
+                    }
+                }
+            }
+            psk
+        };
+        let Some(idx) = self.find_free_channel_idx() else {
+            self.ui.toast("Aucun slot libre", ToastLevel::Error);
+            return;
+        };
+
+        let new_channel = meshcore_storage::channels::StoredChannel {
+            idx,
+            name: name.clone(),
+            channel_type: "public".to_string(),
+            psk: psk.to_vec(),
+            notifications_enabled: true,
+            unread_count: 0,
+        };
+
+        // 1. Insère en DB locale
+        if let Err(e) =
+            meshcore_service::channels::upsert_channel(&self.service, &new_channel)
+        {
+            self.ui
+                .toast(format!("Enregistrement local : {}", e), ToastLevel::Error);
+            return;
+        }
+        self.ui.pop_modal();
+
+        // 2. Sync sur le device (si connecté)
+        if self.ui.connected {
+            channel_actions::spawn_sync_to_device(
+                self.service.clone(),
+                new_channel,
+                self.action_tx.clone(),
+            );
+        } else {
+            self.ui.toast(
+                format!("Canal « {} » créé (non connecté, pas de sync device)", name),
+                ToastLevel::Warn,
+            );
+        }
+        channel_actions::reload(self.service.clone(), self.action_tx.clone());
     }
 
     fn submit_channel_edit(&mut self, sync_to_device: bool) {
@@ -1481,6 +1713,12 @@ impl App {
                 // Recharger les canaux : le service les a rafraîchis depuis le device
                 // pendant le handshake (get_channel 0..8) → l'UI doit les relire en DB
                 channel_actions::reload(self.service.clone(), self.action_tx.clone());
+                // Recharger la liste des DMs existants pour que les conversations
+                // apparaissent dans la tab Chat sans clic préalable
+                messaging_actions::reload_dm_pubkeys(
+                    self.service.clone(),
+                    self.action_tx.clone(),
+                );
                 // Activer l'indicateur de réception — le device va vider sa file d'attente
                 // de messages via mc.start_auto_message_fetching() (potentiellement plusieurs
                 // minutes en BLE multi-hop)
@@ -1828,6 +2066,9 @@ impl App {
                 while self.repeater_ui.cli_output.len() > 500 {
                     self.repeater_ui.cli_output.remove(0);
                 }
+            }
+            AsyncResult::DmPubkeysLoaded(list) => {
+                self.dm_pubkeys = list;
             }
             AsyncResult::ChannelsReloaded(list) => {
                 self.channels = list;

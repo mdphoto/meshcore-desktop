@@ -139,8 +139,23 @@ fn map_modal_key(key: KeyEvent, ui: &AppUiState) -> Action {
             // Space toggle uniquement sur le champ Notifications
             KeyCode::Char(' ') => Action::ChannelsEditToggleNotifications,
             KeyCode::F(2) => Action::ChannelsEditSyncAndSubmit,
+            // F5 : copie le PSK dans le presse-papier (OSC 52)
+            KeyCode::F(5) => Action::ChannelsEditCopyPsk,
             KeyCode::Backspace => Action::ChannelsEditNameBackspace,
             KeyCode::Char(c) => Action::ChannelsEditNameChar(c),
+            _ => Action::NoOp,
+        },
+        Some(ModalKind::ChannelNew) => match key.code {
+            KeyCode::Esc => Action::CloseModal,
+            KeyCode::Enter => Action::ChannelsNewSubmit,
+            KeyCode::Tab => Action::ChannelsNewNextField,
+            KeyCode::BackTab => Action::ChannelsNewPrevField,
+            // F3 : générer un PSK aléatoire (cryptographiquement sûr)
+            KeyCode::F(3) => Action::ChannelsNewGeneratePsk,
+            // F4 : dériver PSK depuis le nom (hashtag room, SHA256[:16])
+            KeyCode::F(4) => Action::ChannelsNewDeriveFromName,
+            KeyCode::Backspace => Action::ChannelsNewBackspace,
+            KeyCode::Char(c) => Action::ChannelsNewChar(c),
             _ => Action::NoOp,
         },
         Some(ModalKind::RepeaterAdmin { .. }) => {
@@ -226,15 +241,30 @@ fn map_chat_key(key: KeyEvent, ui: &AppUiState) -> Action {
     }
 
     match ui.focus {
-        crate::state::FocusTarget::ChatInput => match key.code {
-            KeyCode::Enter => Action::ChatSend,
-            KeyCode::Backspace => Action::ChatInputBackspace,
-            KeyCode::Left => Action::ChatInputLeft,
-            KeyCode::Right => Action::ChatInputRight,
-            KeyCode::Char(c) => Action::ChatInputChar(c),
-            KeyCode::Esc => Action::FocusPrev,
-            _ => Action::NoOp,
-        },
+        crate::state::FocusTarget::ChatInput => {
+            // Raccourcis readline-like avec Ctrl
+            if key.modifiers.contains(KeyModifiers::CONTROL) {
+                return match key.code {
+                    KeyCode::Char('a') => Action::ChatInputHome,
+                    KeyCode::Char('e') => Action::ChatInputEnd,
+                    KeyCode::Char('w') => Action::ChatInputDeletePrevWord,
+                    KeyCode::Char('u') => Action::ChatInputClear,
+                    _ => Action::NoOp,
+                };
+            }
+            match key.code {
+                KeyCode::Enter => Action::ChatSend,
+                KeyCode::Backspace => Action::ChatInputBackspace,
+                KeyCode::Delete => Action::ChatInputDelete,
+                KeyCode::Left => Action::ChatInputLeft,
+                KeyCode::Right => Action::ChatInputRight,
+                KeyCode::Home => Action::ChatInputHome,
+                KeyCode::End => Action::ChatInputEnd,
+                KeyCode::Char(c) => Action::ChatInputChar(c),
+                KeyCode::Esc => Action::FocusPrev,
+                _ => Action::NoOp,
+            }
+        }
         crate::state::FocusTarget::ChatList => match key.code {
             KeyCode::Up => Action::ChatSelectPrev,
             KeyCode::Down => Action::ChatSelectNext,
@@ -260,6 +290,7 @@ fn map_channels_key(key: KeyEvent, _ui: &AppUiState) -> Action {
         KeyCode::Home => Action::Home,
         KeyCode::End => Action::End,
         KeyCode::Enter => Action::Enter,
+        KeyCode::Char('n') => Action::ChannelsRequestNew,
         KeyCode::Char('e') => Action::ChannelsRequestEdit,
         KeyCode::Char('r') => Action::ChannelsMarkRead,
         KeyCode::Char('s') => Action::ChannelsSyncToDevice,

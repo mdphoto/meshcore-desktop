@@ -111,3 +111,12 @@ pub fn get_channel_messages(
         .with_conn(|conn| messages::get_channel_messages(conn, channel_idx, limit, offset))
         .map_err(|e| e.to_string())
 }
+
+/// Retourne les pubkeys distinctes ayant des messages DM en base,
+/// triées par timestamp du dernier message (desc).
+pub fn get_dm_pubkeys(state: &AppState) -> Result<Vec<String>, String> {
+    state
+        .db
+        .with_conn(messages::get_dm_contact_pubkeys)
+        .map_err(|e| e.to_string())
+}
